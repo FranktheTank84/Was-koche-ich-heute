@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KüchenBasis – Franke Family</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--bg:#0f0e0b;--surface:#1a1916;--surface2:#242220;--border:#2e2c29;--accent:#c8a96e;--accent2:#e8c98e;--text:#f0ece4;--text2:#9a9590;--text3:#6a6560;--radius:12px;--radius-sm:8px}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:15px}
+  #login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 30% 50%,#1f1c14 0%,#0f0e0b 70%);padding:20px}
+  .login-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:48px 40px;width:100%;max-width:400px;text-align:center}
+  .login-logo{font-family:'Playfair Display',serif;font-size:28px;color:var(--accent);margin-bottom:6px}
+  .login-sub{color:var(--text3);font-size:13px;margin-bottom:36px;letter-spacing:.1em;text-transform:uppercase}
+  .login-box input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;margin-bottom:12px;outline:none;transition:border-color .2s}
+  .login-box input:focus{border-color:var(--accent)}
+  .btn-primary{width:100%;background:var(--accent);color:#0f0e0b;border:none;border-radius:var(--radius-sm);padding:14px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:15px;cursor:pointer}
+  .login-error{color:#c47a7a;font-size:13px;margin-top:10px;display:none}
+  #app{display:none;min-height:100vh}
+  .topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:56px;position:sticky;top:0;z-index:100}
+  .topbar-logo{font-family:'Playfair Display',serif;font-size:20px;color:var(--accent)}
+  .topbar-right{display:flex;align-items:center;gap:8px}
+  .sync-ok{font-size:11px;color:#5a8a5a}.sync-err{font-size:11px;color:#c47a7a}.sync-loading{font-size:11px;color:var(--text3)}
+  .topbar-logout{background:none;border:1px solid var(--border);color:var(--text3);border-radius:var(--radius-sm);padding:6px 12px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif}
+  .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+  .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 0;background:none;border:none;color:var(--text3);font-family:'DM Sans',sans-serif;font-size:10px;cursor:pointer;transition:color .2s}
+  .nav-btn.active{color:var(--accent)}
+  .nav-btn svg{width:22px;height:22px}
+  .content{padding:20px 16px 100px;max-width:600px;margin:0 auto}
+  .section-title{font-family:'Playfair Display',serif;font-size:22px;color:var(--text);margin-bottom:4px}
+  .section-sub{color:var(--text3);font-size:13px;margin-bottom:20px}
+  .tabs{display:flex;gap:8px;margin-bottom:20px;overflow-x:auto;padding-bottom:4px}
+  .tab{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:7px 16px;font-size:13px;color:var(--text3);cursor:pointer;white-space:nowrap;transition:all .2s;font-family:'DM Sans',sans-serif}
+  .tab.active{background:var(--accent);color:#0f0e0b;border-color:var(--accent);font-weight:600}
+  .bestand-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:8px}
+  .item-emoji{font-size:24px;flex-shrink:0}
+  .item-info{flex:1;min-width:0}
+  .item-name{font-weight:500;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .item-meta{font-size:12px;color:var(--text3);margin-top:2px}
+  .item-qty{display:flex;align-items:center;gap:8px;flex-shrink:0}
+  .qty-btn{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;font-family:'DM Sans',sans-serif}
+  .qty-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .qty-num{font-weight:600;font-size:15px;min-width:24px;text-align:center}
+  .qty-low{color:#c47a7a}.qty-ok{color:var(--accent)}
+  .item-delete{background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;opacity:.5;transition:opacity .2s}
+  .item-delete:hover{opacity:1;color:#c47a7a}
+  .add-form{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px}
+  .add-form-title{font-size:13px;font-weight:600;color:var(--accent);margin-bottom:12px;text-transform:uppercase;letter-spacing:.05em}
+  .form-row{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+  .form-input{flex:1;min-width:120px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .2s}
+  .form-input:focus{border-color:var(--accent)}
+  .form-select{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;cursor:pointer}
+  .btn-add{background:var(--accent);color:#0f0e0b;border:none;border-radius:var(--radius-sm);padding:10px 20px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap}
+  .btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 16px;font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;white-space:nowrap}
+  .rezept-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:10px;cursor:pointer;transition:border-color .2s,transform .15s}
+  .rezept-card:hover{border-color:var(--accent);transform:translateY(-1px)}
+  .rezept-header{display:flex;align-items:flex-start;gap:12px}
+  .rezept-emoji{font-size:28px;flex-shrink:0}
+  .rezept-info{flex:1}
+  .rezept-name{font-weight:600;font-size:15px;color:var(--text);margin-bottom:4px}
+  .rezept-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .tag{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--text3)}
+  .tag-fisch{border-color:#4a7a9a;color:#7aaaca}.tag-fleisch{border-color:#8a5a4a;color:#ca8a7a}.tag-vegetarisch{border-color:#5a7a5a;color:#8aaa8a}.tag-friedi{border-color:#7a6a4a;color:#aaa06a}
+  .rezept-meta{display:flex;gap:12px;margin-top:8px}
+  .rezept-meta span{font-size:12px;color:var(--text3)}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;display:none;align-items:flex-end;justify-content:center}
+  .modal-overlay.open{display:flex}
+  .modal{background:var(--surface);border-radius:20px 20px 0 0;border:1px solid var(--border);border-bottom:none;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;padding:24px 20px 40px;animation:slideUp .3s ease}
+  @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  .modal-close{float:right;background:var(--surface2);border:1px solid var(--border);border-radius:50%;width:32px;height:32px;cursor:pointer;color:var(--text3);font-size:18px;display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+  .modal-title{font-family:'Playfair Display',serif;font-size:22px;margin-bottom:6px;clear:both}
+  .portionen-row{display:flex;align-items:center;gap:12px;background:var(--surface2);border-radius:var(--radius-sm);padding:12px 16px;margin:16px 0}
+  .portionen-label{font-size:13px;color:var(--text3);flex:1}
+  .zutaten-list{margin:12px 0}
+  .zutat-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px}
+  .zutat-row:last-child{border-bottom:none}
+  .zutat-menge{color:var(--accent);font-weight:500}
+  .schritte-list{margin:12px 0}
+  .schritt-row{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px;line-height:1.5}
+  .schritt-row:last-child{border-bottom:none}
+  .schritt-num{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#0f0e0b;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+  h3{font-family:'Playfair Display',serif;font-size:16px;color:var(--accent);margin:20px 0 8px}
+  .abbuchen-box{background:#1a2a1a;border:1px solid #2a4a2a;border-radius:var(--radius-sm);padding:14px;margin-top:16px}
+  .abbuchen-title{font-size:13px;color:#8aaa8a;margin-bottom:8px;font-weight:600}
+  .abbuchen-item{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;color:var(--text2)}
+  .abbuchen-item span:last-child{color:#c47a7a}
+  .ki-box{background:var(--surface);border:1px solid var(--accent);border-radius:var(--radius);padding:20px;margin-bottom:16px}
+  .ki-title{font-family:'Playfair Display',serif;font-size:18px;color:var(--accent);margin-bottom:4px}
+  .ki-sub{font-size:13px;color:var(--text3);margin-bottom:16px}
+  .zutaten-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .chip{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:13px;cursor:pointer;transition:all .2s;color:var(--text3);font-family:'DM Sans',sans-serif}
+  .chip.selected{background:var(--accent);color:#0f0e0b;border-color:var(--accent);font-weight:600}
+  .ki-result{background:var(--surface2);border-radius:var(--radius-sm);padding:14px;margin-top:12px;border-left:3px solid var(--accent)}
+  .ki-loading{display:flex;align-items:center;gap:10px;color:var(--text3);font-size:14px}
+  .spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .upload-area{border:2px dashed var(--border);border-radius:var(--radius);padding:32px 20px;text-align:center;cursor:pointer;transition:border-color .2s;margin-bottom:12px}
+  .upload-area:hover{border-color:var(--accent)}
+  .upload-area input{display:none}
+  .upload-icon{font-size:32px;margin-bottom:8px}
+  .upload-text{font-size:13px;color:var(--text3)}
+  .einkauf-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .einkauf-check{width:20px;height:20px;cursor:pointer;accent-color:var(--accent)}
+  .einkauf-name{flex:1;font-size:14px}
+  .einkauf-done{text-decoration:line-through;opacity:.5}
+  .warning-badge{background:#3a2020;border:1px solid #5a3030;border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:#c47a7a;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .empty-state{text-align:center;padding:40px 20px;color:var(--text3)}
+  .empty-icon{font-size:40px;margin-bottom:12px}
+  .empty-text{font-size:14px}
+  .page{display:none}
+  .page.active{display:block}
+  .url-row{display:flex;gap:8px;margin-bottom:12px}
+  .ort-header{font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin:16px 0 8px}
+  ::-webkit-scrollbar{width:4px}
+  ::-webkit-scrollbar-track{background:var(--bg)}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">KüchenBasis</div>
+    <div class="login-sub">Franke Family · Isernhagen</div>
+    <input type="text" id="lu" placeholder="Benutzername" autocomplete="off"/>
+    <input type="password" id="lp" placeholder="Passwort"/>
+    <button class="btn-primary" onclick="doLogin()">Anmelden</button>
+    <div class="login-error" id="lerr">Falscher Benutzername oder Passwort</div>
+  </div>
+</div>
+
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo">KüchenBasis</div>
+    <div class="topbar-right">
+      <span id="sync" class="sync-loading">⟳ Sync...</span>
+      <button class="topbar-logout" onclick="doLogout()">Abmelden</button>
+    </div>
+  </div>
+
+  <div class="page active content" id="page-bestand">
+    <div class="section-title">Bestand</div>
+    <div class="section-sub">Kühlschrank, Gefrierschrank & Vorrat</div>
+    <div id="low-warn"></div>
+    <div class="tabs">
+      <button class="tab active" onclick="bTab('alle',this)">Alle</button>
+      <button class="tab" onclick="bTab('kuehlschrank',this)">❄️ Kühlschrank</button>
+      <button class="tab" onclick="bTab('gefrierschrank',this)">🧊 Gefrier</button>
+      <button class="tab" onclick="bTab('vorrat',this)">🗄️ Vorrat</button>
+    </div>
+    <div class="add-form">
+      <div class="add-form-title">+ Neuer Artikel</div>
+      <div class="form-row">
+        <input class="form-input" id="ni-name" placeholder="Name (z.B. Hähnchenbrust)"/>
+        <input class="form-input" id="ni-emoji" placeholder="Emoji" style="max-width:80px"/>
+      </div>
+      <div class="form-row">
+        <select class="form-select" id="ni-ort">
+          <option value="kuehlschrank">❄️ Kühlschrank</option>
+          <option value="gefrierschrank">🧊 Gefrierschrank</option>
+          <option value="vorrat">🗄️ Vorrat</option>
+        </select>
+        <select class="form-select" id="ni-einheit">
+          <option>Stück</option><option>Portionen</option><option>Pakete</option><option>Gläser</option><option>Dosen</option><option>g</option>
+        </select>
+        <input class="form-input" id="ni-qty" type="number" value="1" min="0" style="max-width:90px"/>
+        <button class="btn-add" onclick="addItem()">+ Hinzufügen</button>
+      </div>
+    </div>
+    <div id="bestand-list"></div>
+  </div>
+
+  <div class="page content" id="page-rezepte">
+    <div class="section-title">Rezepte</div>
+    <div class="section-sub">Eure Sammlung</div>
+    <div class="tabs">
+      <button class="tab active" onclick="rTab('alle',this)">Alle</button>
+      <button class="tab" onclick="rTab('fisch',this)">🐟 Fisch</button>
+      <button class="tab" onclick="rTab('fleisch',this)">🥩 Fleisch</button>
+      <button class="tab" onclick="rTab('vegetarisch',this)">🥦 Veggie</button>
+      <button class="tab" onclick="rTab('friedi',this)">👧 Friedi</button>
+    </div>
+    <div class="add-form">
+      <div class="add-form-title">Rezept hinzufügen</div>
+      <div class="url-row">
+        <input class="form-input" id="rez-url" placeholder="URL von Chefkoch, Lecker.de..."/>
+        <button class="btn-add" onclick="rezFromUrl()">📎 Laden</button>
+      </div>
+      <div class="upload-area" id="upload-area" onclick="document.getElementById('foto-in').click()">
+        <input type="file" id="foto-in" accept="image/*" onchange="rezFromFoto(event)"/>
+        <div class="upload-icon">📸</div>
+        <div class="upload-text">Buchseite fotografieren & KI liest Rezept aus</div>
+      </div>
+      <button class="btn-secondary" style="width:100%" onclick="openManual()">✏️ Manuell eingeben</button>
+    </div>
+    <div id="rezept-list"></div>
+  </div>
+
+  <div class="page content" id="page-ki">
+    <div class="section-title">Was koche ich?</div>
+    <div class="section-sub">KI schlägt Rezepte aus eurem Bestand vor</div>
+    <div class="ki-box">
+      <div class="ki-title">🤖 KI-Vorschläge</div>
+      <div class="ki-sub">Wähle Kategorie und Zutaten</div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Kategorie</div>
+      <div class="zutaten-chips" id="ki-kat">
+        <span class="chip" onclick="katChip(this)">🐟 Fisch</span>
+        <span class="chip" onclick="katChip(this)">🥩 Fleisch</span>
+        <span class="chip" onclick="katChip(this)">🥦 Vegetarisch</span>
+        <span class="chip" onclick="katChip(this)">👧 Friedi-tauglich</span>
+        <span class="chip" onclick="katChip(this)">⚡ Schnell &lt;30min</span>
+      </div>
+      <div style="font-size:12px;color:var(--text3);margin:12px 0 8px;text-transform:uppercase;letter-spacing:.05em">Zutaten im Bestand</div>
+      <div class="zutaten-chips" id="ki-zut"></div>
+      <button class="btn-primary" style="margin-top:16px" onclick="kiVorschlag()">Rezepte vorschlagen lassen</button>
+      <div id="ki-result" style="margin-top:16px"></div>
+    </div>
+  </div>
+
+  <div class="page content" id="page-einkauf">
+    <div class="section-title">Einkaufsliste</div>
+    <div class="section-sub">Automatisch wenn Bestand zu niedrig</div>
+    <button class="btn-secondary" style="margin-bottom:16px;width:100%" onclick="clearDone()">✓ Erledigte entfernen</button>
+    <div id="einkauf-list"></div>
+  </div>
+
+  <nav class="bottom-nav">
+    <button class="nav-btn active" onclick="nav('bestand',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>Bestand
+    </button>
+    <button class="nav-btn" onclick="nav('rezepte',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4zM8 4v16M8 12h12"/></svg>Rezepte
+    </button>
+    <button class="nav-btn" onclick="nav('ki',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>Was koche ich?
+    </button>
+    <button class="nav-btn" onclick="nav('einkauf',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg>Einkauf
+    </button>
+  </nav>
+</div>
+
+<div class="modal-overlay" id="rez-modal"><div class="modal" id="rez-modal-c"></div></div>
+
+<div class="modal-overlay" id="man-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('man-modal')">✕</button>
+    <div class="modal-title">Rezept eingeben</div>
+    <div style="clear:both;margin-top:16px"></div>
+    <div class="form-row">
+      <input class="form-input" id="m-name" placeholder="Rezeptname"/>
+      <input class="form-input" id="m-emoji" placeholder="Emoji" style="max-width:80px"/>
+    </div>
+    <div class="form-row">
+      <select class="form-select" id="m-kat"><option value="fisch">🐟 Fisch</option><option value="fleisch">🥩 Fleisch</option><option value="vegetarisch">🥦 Vegetarisch</option></select>
+      <input class="form-input" id="m-zeit" placeholder="Zeit (z.B. 30 Min)"/>
+      <input class="form-input" id="m-port" type="number" value="4" style="max-width:100px"/>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer">
+      <input type="checkbox" id="m-friedi" style="width:16px;height:16px"/>
+      <span style="font-size:14px">Friedi isst das auch</span>
+    </label>
+    <div style="margin-bottom:8px;font-size:13px;color:var(--text3)">Zutaten (eine pro Zeile, z.B. "500g Hackfleisch")</div>
+    <textarea class="form-input" id="m-zut" rows="5" style="width:100%;resize:vertical" placeholder="500g Hackfleisch&#10;2 Zwiebeln&#10;400g Dosentomaten"></textarea>
+    <div style="margin:12px 0 8px;font-size:13px;color:var(--text3)">Zubereitung</div>
+    <textarea class="form-input" id="m-zub" rows="6" style="width:100%;resize:vertical" placeholder="Schritt für Schritt..."></textarea>
+    <div class="form-row" style="margin-top:12px">
+      <button class="btn-add" style="flex:1" onclick="saveManual()">Rezept speichern</button>
+      <button class="btn-secondary" onclick="closeModal('man-modal')">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SURL='https://hrvyecfyjwazslfxsouh.supabase.co';
+const SKEY='sb_publishable_kW5MDG_UcZi8IgAlUdwtFA_sbKApqe5';
+const {createClient}=supabase;
+const db=createClient(SURL,SKEY);
+
+let bestand=[],rezepte=[],einkauf=JSON.parse(localStorage.getItem('kb_einkauf')||'[]');
+let bFilter='alle',rFilter='alle';
+
+function sync(s){const el=document.getElementById('sync');if(s==='ok'){el.textContent='✓ Synchronisiert';el.className='sync-ok';}else if(s==='err'){el.textContent='✗ Offline';el.className='sync-err';}else{el.textContent='⟳ Sync...';el.className='sync-loading';}}
+
+function doLogin(){
+  const u=document.getElementById('lu').value.trim().toLowerCase();
+  const p=document.getElementById('lp').value.trim();
+  if(u==='franke'&&p==='isernhagen2024'){
+    localStorage.setItem('kb_login','1');
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    init();
+  }else{document.getElementById('lerr').style.display='block';}
+}
+function doLogout(){localStorage.removeItem('kb_login');document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';}
+document.getElementById('lp').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+
+async function init(){
+  sync('loading');
+  await Promise.all([loadB(),loadR()]);
+  renderAll();
+  db.channel('b').on('postgres_changes',{event:'*',schema:'public',table:'bestand'},()=>loadB().then(renderB)).subscribe();
+  db.channel('r').on('postgres_changes',{event:'*',schema:'public',table:'rezepte'},()=>loadR().then(renderR)).subscribe();
+}
+
+async function loadB(){
+  try{const{data,error}=await db.from('bestand').select('*').order('created_at');if(error)throw error;bestand=data||[];sync('ok');localStorage.setItem('kb_bc',JSON.stringify(bestand));}
+  catch(e){sync('err');bestand=JSON.parse(localStorage.getItem('kb_bc')||'[]');}
+}
+async function loadR(){
+  try{const{data,error}=await db.from('rezepte').select('*').order('created_at');if(error)throw error;rezepte=data||[];localStorage.setItem('kb_rc',JSON.stringify(rezepte));}
+  catch(e){rezepte=JSON.parse(localStorage.getItem('kb_rc')||'[]');}
+}
+
+async function addItem(){
+  const name=document.getElementById('ni-name').value.trim();
+  if(!name)return;
+  try{
+    await db.from('bestand').insert({name,emoji:document.getElementById('ni-emoji').value||'📦',ort:document.getElementById('ni-ort').value,einheit:document.getElementById('ni-einheit').value,qty:parseFloat(document.getElementById('ni-qty').value)||1,min_qty:1});
+    document.getElementById('ni-name').value='';document.getElementById('ni-emoji').value='';document.getElementById('ni-qty').value='1';
+    await loadB();renderB();renderKiZut();
+  }catch(e){alert('Fehler: '+e.message);}
+}
+
+async function changeQty(id,delta){
+  const item=bestand.find(i=>i.id===id);if(!item)return;
+  const nq=Math.max(0,item.qty+delta);
+  try{await db.from('bestand').update({qty:nq,updated_at:new Date().toISOString()}).eq('id',id);item.qty=nq;if(nq<=item.min_qty&&nq>0)addToEinkauf(item.name,item.einheit);renderB();renderEinkauf();}
+  catch(e){console.error(e);}
+}
+
+async function delItem(id){
+  try{await db.from('bestand').delete().eq('id',id);bestand=bestand.filter(i=>i.id!==id);renderB();renderKiZut();}
+  catch(e){alert('Fehler beim Löschen');}
+}
+
+async function saveRez(r){
+  try{const{error}=await db.from('rezepte').insert(r);if(error)throw error;await loadR();renderR();return true;}
+  catch(e){alert('Fehler: '+e.message);return false;}
+}
+
+async function delRez(id){
+  if(!confirm('Rezept wirklich löschen?'))return;
+  try{await db.from('rezepte').delete().eq('id',id);rezepte=rezepte.filter(r=>r.id!==id);closeModal('rez-modal');renderR();}
+  catch(e){alert('Fehler');}
+}
+
+function addToEinkauf(name,einheit){
+  if(!einkauf.find(e=>e.name===name)){einkauf.push({name,einheit,done:false});localStorage.setItem('kb_einkauf',JSON.stringify(einkauf));renderEinkauf();}}
+function toggleEinkauf(i){einkauf[i].done=!einkauf[i].done;localStorage.setItem('kb_einkauf',JSON.stringify(einkauf));renderEinkauf();}
+function clearDone(){einkauf=einkauf.filter(e=>!e.done);localStorage.setItem('kb_einkauf',JSON.stringify(einkauf));renderEinkauf();}
+
+function renderAll(){renderB();renderR();renderKiZut();renderEinkauf();}
+
+function bTab(f,btn){document.querySelectorAll('#page-bestand .tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');bFilter=f;renderB();}
+function rTab(f,btn){document.querySelectorAll('#page-rezepte .tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');rFilter=f;renderR();}
+
+function renderB(){
+  const list=document.getElementById('bestand-list');
+  const warn=document.getElementById('low-warn');
+  const filtered=bestand.filter(i=>bFilter==='alle'||i.ort===bFilter);
+  const low=bestand.filter(i=>i.qty<=i.min_qty&&i.qty>0);
+  warn.innerHTML=low.length?`<div class="warning-badge">⚠️ Bald leer: ${low.map(i=>i.name).join(', ')}</div>`:'';
+  if(!filtered.length){list.innerHTML='<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">Noch nichts hier.<br>Artikel oben hinzufügen.</div></div>';return;}
+  const g={kuehlschrank:[],gefrierschrank:[],vorrat:[]};
+  filtered.forEach(i=>{if(g[i.ort])g[i.ort].push(i);});
+  const lb={kuehlschrank:'❄️ Kühlschrank',gefrierschrank:'🧊 Gefrierschrank',vorrat:'🗄️ Vorrat'};
+  let html='';
+  for(const[ort,items]of Object.entries(g)){
+    if(!items.length)continue;
+    if(bFilter==='alle')html+=`<div class="ort-header">${lb[ort]}</div>`;
+    items.forEach(item=>{
+      const c=item.qty<=item.min_qty?'qty-low':'qty-ok';
+      html+=`<div class="bestand-item"><div class="item-emoji">${item.emoji}</div><div class="item-info"><div class="item-name">${item.name}</div><div class="item-meta">${lb[item.ort]}</div></div><div class="item-qty"><button class="qty-btn" onclick="changeQty(${item.id},-1)">−</button><span class="qty-num ${c}">${item.qty} <span style="font-size:11px;font-weight:400">${item.einheit}</span></span><button class="qty-btn" onclick="changeQty(${item.id},1)">+</button></div><button class="item-delete" onclick="delItem(${item.id})">🗑</button></div>`;
+    });
+  }
+  list.innerHTML=html;
+}
+
+function renderR(){
+  const list=document.getElementById('rezept-list');
+  let f=rezepte;
+  if(rFilter==='friedi')f=f.filter(r=>r.friedi);
+  else if(rFilter!=='alle')f=f.filter(r=>r.kategorie===rFilter);
+  if(!f.length){list.innerHTML='<div class="empty-state"><div class="empty-icon">📖</div><div class="empty-text">Noch keine Rezepte.<br>URL einfügen, Foto hochladen oder manuell eingeben.</div></div>';return;}
+  list.innerHTML=f.map(r=>`<div class="rezept-card" onclick="showRez(${r.id})"><div class="rezept-header"><div class="rezept-emoji">${r.emoji||'🍳'}</div><div class="rezept-info"><div class="rezept-name">${r.name}</div><div class="rezept-tags"><span class="tag tag-${r.kategorie}">${r.kategorie==='fisch'?'🐟 Fisch':r.kategorie==='fleisch'?'🥩 Fleisch':'🥦 Vegetarisch'}</span>${r.friedi?'<span class="tag tag-friedi">👧 Friedi</span>':''}${r.quelle?`<span class="tag">${r.quelle}</span>`:''}</div><div class="rezept-meta"><span>⏱ ${r.zeit||'?'}</span><span>👥 ${r.portionen||4} Port.</span></div></div></div></div>`).join('');
+}
+
+function showRez(id){
+  const r=rezepte.find(x=>x.id===id);if(!r)return;
+  r.cp=r.cp||r.portionen||4;
+  const zut=Array.isArray(r.zutaten)?r.zutaten:[];
+  const abb=zut.filter(z=>bestand.find(b=>b.name.toLowerCase().includes((z.name||'').toLowerCase().split(' ')[0])));
+  document.getElementById('rez-modal-c').innerHTML=`
+    <button class="modal-close" onclick="closeModal('rez-modal')">✕</button>
+    <div class="modal-title">${r.emoji||'🍳'} ${r.name}</div>
+    <div style="clear:both;margin-bottom:8px"></div>
+    <div class="rezept-tags"><span class="tag tag-${r.kategorie}">${r.kategorie==='fisch'?'🐟 Fisch':r.kategorie==='fleisch'?'🥩 Fleisch':'🥦 Vegetarisch'}</span>${r.friedi?'<span class="tag tag-friedi">👧 Friedi</span>':''}</div>
+    <div class="portionen-row"><span class="portionen-label">Portionen anpassen</span><button class="qty-btn" onclick="chPort(${r.id},-1)">−</button><span class="qty-num" id="mp-${r.id}">${r.cp}</span><button class="qty-btn" onclick="chPort(${r.id},1)">+</button></div>
+    <h3>Zutaten</h3><div class="zutaten-list" id="mz-${r.id}">${renderZut(r,r.cp)}</div>
+    ${zut.length?`<div class="abbuchen-box"><div class="abbuchen-title">📦 Bestand abbuchen beim Kochen</div>${abb.map(z=>`<div class="abbuchen-item"><span>${z.name}</span><span>−1 Stück</span></div>`).join('')||'<div style="font-size:13px;color:var(--text3)">Keine passenden Artikel im Bestand</div>'}${abb.length?`<button class="btn-add" style="width:100%;margin-top:12px" onclick="abbuchen(${r.id})">✓ Jetzt abbuchen</button>`:''}</div>`:''}
+    ${r.schritte&&r.schritte.length?`<h3>Zubereitung</h3><div class="schritte-list">${r.schritte.map((s,i)=>`<div class="schritt-row"><div class="schritt-num">${i+1}</div><div>${s}</div></div>`).join('')}</div>`:''}
+    ${r.url?`<div style="margin-top:16px"><a href="${r.url}" target="_blank" style="color:var(--accent);font-size:13px">🔗 Originalrezept öffnen</a></div>`:''}
+    <button class="btn-secondary" style="width:100%;margin-top:16px;color:#c47a7a;border-color:#5a3030" onclick="delRez(${r.id})">🗑 Rezept löschen</button>`;
+  document.getElementById('rez-modal').classList.add('open');
+}
+
+function renderZut(r,p){
+  const base=r.portionen||4,f=p/base;
+  const zut=Array.isArray(r.zutaten)?r.zutaten:[];
+  return zut.map(z=>{const s=z.menge?`${Math.round(z.menge*f*10)/10} ${z.einheit||''}`.trim():(z.einheit||'');return`<div class="zutat-row"><span>${z.name}</span><span class="zutat-menge">${s}</span></div>`;}).join('')||'<div style="color:var(--text3);font-size:14px">Keine Zutaten eingetragen</div>';
+}
+
+function chPort(id,d){
+  const r=rezepte.find(x=>x.id===id);if(!r)return;
+  r.cp=Math.max(1,(r.cp||r.portionen||4)+d);
+  document.getElementById(`mp-${id}`).textContent=r.cp;
+  document.getElementById(`mz-${id}`).innerHTML=renderZut(r,r.cp);
+}
+
+async function abbuchen(id){
+  const r=rezepte.find(x=>x.id===id);if(!r)return;
+  const zut=Array.isArray(r.zutaten)?r.zutaten:[];
+  for(const z of zut){const item=bestand.find(b=>b.name.toLowerCase().includes((z.name||'').toLowerCase().split(' ')[0]));if(item&&item.qty>0)await changeQty(item.id,-1);}
+  closeModal('rez-modal');alert('✓ Bestand wurde abgebucht!');
+}
+
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+async function rezFromUrl(){
+  const url=document.getElementById('rez-url').value.trim();if(!url)return;
+  const btn=document.querySelector('[onclick="rezFromUrl()"]');btn.textContent='⏳...';btn.disabled=true;
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:`Extrahiere das Rezept von dieser URL: ${url}\n\nAntworte NUR mit JSON:\n{"name":"...","emoji":"...","kategorie":"fisch|fleisch|vegetarisch","zeit":"30 Min","portionen":4,"friedi":false,"zutaten":[{"name":"...","menge":500,"einheit":"g"}],"schritte":["Schritt 1"]}`}]})});
+    const data=await resp.json();
+    const text=data.content?.map(c=>c.text||'').join('')||'';
+    const rez=JSON.parse(text.replace(/```json|```/g,'').trim());
+    rez.url=url;try{rez.quelle=new URL(url).hostname.replace('www.','');}catch(e){rez.quelle='Web';}
+    await saveRez(rez);document.getElementById('rez-url').value='';
+  }catch(e){alert('Fehler. Bitte manuell eingeben.');}
+  btn.textContent='📎 Laden';btn.disabled=false;
+}
+
+async function rezFromFoto(event){
+  const file=event.target.files[0];if(!file)return;
+  const area=document.getElementById('upload-area');
+  area.innerHTML='<div class="ki-loading"><div class="spinner"></div> KI liest Rezept aus Foto...</div>';
+  try{
+    const b64=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result.split(',')[1]);fr.onerror=rej;fr.readAsDataURL(file);});
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type,data:b64}},{type:'text',text:'Lies das Rezept aus diesem Foto. Antworte NUR mit JSON:\n{"name":"...","emoji":"...","kategorie":"fisch|fleisch|vegetarisch","zeit":"30 Min","portionen":4,"friedi":false,"zutaten":[{"name":"...","menge":500,"einheit":"g"}],"schritte":["Schritt 1"]}'}]}]})});
+    const data=await resp.json();
+    const text=data.content?.map(c=>c.text||'').join('')||'';
+    const rez=JSON.parse(text.replace(/```json|```/g,'').trim());
+    rez.quelle='Foto';await saveRez(rez);
+  }catch(e){alert('Fehler. Bitte manuell eingeben.');}
+  area.innerHTML='<input type="file" id="foto-in" accept="image/*" onchange="rezFromFoto(event)"/><div class="upload-icon">📸</div><div class="upload-text">Buchseite fotografieren & KI liest Rezept aus</div>';
+  area.onclick=()=>document.getElementById('foto-in').click();
+  event.target.value='';
+}
+
+function openManual(){document.getElementById('man-modal').classList.add('open');}
+
+async function saveManual(){
+  const name=document.getElementById('m-name').value.trim();if(!name)return alert('Bitte Namen eingeben');
+  const zutT=document.getElementById('m-zut').value.trim();
+  const zut=zutT.split('\n').filter(z=>z.trim()).map(z=>{const m=z.match(/^([\d.,]+)\s*([a-zA-ZäöüÄÖÜ]+)?\s+(.+)$/);return m?{menge:parseFloat(m[1]),einheit:m[2]||'',name:m[3]}:{name:z.trim(),menge:null,einheit:''};});
+  const schritte=document.getElementById('m-zub').value.trim().split('\n').filter(s=>s.trim());
+  const ok=await saveRez({name,emoji:document.getElementById('m-emoji').value||'🍳',kategorie:document.getElementById('m-kat').value,zeit:document.getElementById('m-zeit').value||'?',portionen:parseInt(document.getElementById('m-port').value)||4,friedi:document.getElementById('m-friedi').checked,zutaten:zut,schritte,quelle:'Manuell'});
+  if(ok){closeModal('man-modal');['m-name','m-emoji','m-zeit','m-zut','m-zub'].forEach(id=>document.getElementById(id).value='');document.getElementById('m-friedi').checked=false;}
+}
+
+function katChip(c){document.querySelectorAll('#ki-kat .chip').forEach(x=>x.classList.remove('selected'));c.classList.toggle('selected');}
+
+function renderKiZut(){
+  const chips=document.getElementById('ki-zut');
+  const u=[...new Set(bestand.map(i=>i.name))];
+  chips.innerHTML=u.map(n=>`<span class="chip" onclick="this.classList.toggle('selected')">${n}</span>`).join('');
+}
+
+async function kiVorschlag(){
+  const kat=[...document.querySelectorAll('#ki-kat .chip.selected')].map(c=>c.textContent).join(', ');
+  const zut=[...document.querySelectorAll('#ki-zut .chip.selected')].map(c=>c.textContent).join(', ');
+  const rn=rezepte.map(r=>r.name).join(', ');
+  const result=document.getElementById('ki-result');
+  result.innerHTML='<div class="ki-loading"><div class="spinner"></div> KI denkt nach...</div>';
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:`Du bist Kochassistent für Familie Franke (Christian, Yvonne, Friedi). Herzhafte Küche, viel Umami, keine starke Schärfe, immer frische Komponente dabei.\n${kat?`Kategorie: ${kat}`:''}${zut?`\nVerfügbare Zutaten: ${zut}`:''}\n${rn?`Bekannte Rezepte: ${rn}`:''}\nSchlage 2-3 Gerichte vor. Pro Gericht: Name+Emoji, warum es passt, Hauptzutaten, Kochzeit, ob Friedi es isst. Auf Deutsch, locker.`}]})});
+    const data=await resp.json();
+    const text=data.content?.map(c=>c.text||'').join('')||'';
+    result.innerHTML=`<div class="ki-result" style="white-space:pre-wrap;line-height:1.6;font-size:14px">${text}</div>`;
+  }catch(e){result.innerHTML='<div class="ki-result" style="color:#c47a7a">Fehler.</div>';}
+}
+
+function renderEinkauf(){
+  const list=document.getElementById('einkauf-list');
+  bestand.filter(i=>i.qty<=i.min_qty).forEach(i=>addToEinkauf(i.name,i.einheit));
+  if(!einkauf.length){list.innerHTML='<div class="empty-state"><div class="empty-icon">🛒</div><div class="empty-text">Einkaufsliste ist leer.<br>Wird automatisch befüllt wenn Bestand zu niedrig.</div></div>';return;}
+  list.innerHTML=einkauf.map((e,i)=>`<div class="einkauf-item"><input type="checkbox" class="einkauf-check" ${e.done?'checked':''} onchange="toggleEinkauf(${i})"/><span class="einkauf-name ${e.done?'einkauf-done':''}">${e.name} <span style="color:var(--text3);font-size:12px">${e.einheit||''}</span></span></div>`).join('');
+}
+
+function nav(p,btn){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));document.getElementById('page-'+p).classList.add('active');btn.classList.add('active');}
+
+document.getElementById('rez-modal').addEventListener('click',e=>{if(e.target===document.getElementById('rez-modal'))closeModal('rez-modal');});
+document.getElementById('man-modal').addEventListener('click',e=>{if(e.target===document.getElementById('man-modal'))closeModal('man-modal');});
+
+if(localStorage.getItem('kb_login')==='1'){document.getElementById('login-screen').style.display='none';document.getElementById('app').style.display='block';init();}
+</script>
+</body>
+</html>

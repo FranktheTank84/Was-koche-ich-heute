@@ -301,6 +301,43 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('confirm-modal')">✕</button>
+    <div class="modal-title">✅ Rezept prüfen</div>
+    <div style="clear:both;margin-top:12px"></div>
+    <div id="confirm-preview" style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px;font-size:14px"></div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:10px">Noch anpassen:</div>
+    <div class="form-row" style="flex-wrap:wrap;gap:16px;margin-bottom:12px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="c-friedi" style="width:16px;height:16px"/>
+        <span style="font-size:14px">👧 Friedi</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="c-finn" style="width:16px;height:16px"/>
+        <span style="font-size:14px">👦 Finn</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="c-salat" style="width:16px;height:16px"/>
+        <span style="font-size:14px">🥗 Mit Salat</span>
+      </label>
+    </div>
+    <select class="form-select" id="c-kh" style="width:100%;margin-bottom:16px">
+      <option value="">Kohlenhydrate (optional)</option>
+      <option value="nudeln">🍝 Nudeln</option>
+      <option value="reis">🍚 Reis</option>
+      <option value="kartoffeln">🥔 Kartoffeln</option>
+      <option value="gnocchi">🫙 Gnocchi</option>
+      <option value="brot">🍞 Brot</option>
+      <option value="keins">Ohne Kohlenhydrate</option>
+    </select>
+    <div class="form-row">
+      <button class="btn-add" style="flex:1" onclick="saveConfirmRez()">💾 Rezept speichern</button>
+      <button class="btn-secondary" onclick="closeModal('confirm-modal')">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="man-modal">
   <div class="modal">
     <button class="modal-close" onclick="closeModal('man-modal')">✕</button>
@@ -590,7 +627,7 @@ async function rezFromUrl(){
     const text=data.content?.map(c=>c.text||'').join('')||'';
     const rez=JSON.parse(text.replace(/```json|```/g,'').trim());
     rez.url=url;try{rez.quelle=new URL(url).hostname.replace('www.','');}catch(e){rez.quelle='Web';}
-    await saveRez(rez);document.getElementById('rez-url').value='';
+    document.getElementById('rez-url').value='';openConfirmRez(rez);
   }catch(e){alert('Fehler. Bitte manuell eingeben.');}
   btn.textContent='📎 Laden';btn.disabled=false;
 }
@@ -605,9 +642,30 @@ async function rezFromFoto(event){
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
     const rez=JSON.parse(text.replace(/```json|```/g,'').trim());
-    rez.quelle='Foto';await saveRez(rez);
+    rez.quelle='Foto';openConfirmRez(rez);
   }catch(e){alert('Fehler: '+e.message);}
   area.innerHTML='<input type="file" id="foto-in" accept="image/*" style="display:none" onchange="rezFromFoto(event)"/><div class="upload-icon">📸</div><div class="upload-text">Buchseite fotografieren & KI liest Rezept aus</div>';
+}
+
+let _pendingRez=null;
+function openConfirmRez(rez){
+  _pendingRez=rez;
+  document.getElementById('confirm-preview').innerHTML=`<strong>${rez.emoji||'🍳'} ${rez.name}</strong><br><span style="color:var(--text3)">${katLabel(rez.kategorie)} · ⏱ ${rez.zeit||'?'} · 👥 ${rez.portionen||4} Port.</span>`;
+  document.getElementById('c-friedi').checked=!!rez.friedi;
+  document.getElementById('c-finn').checked=!!rez.finn;
+  document.getElementById('c-salat').checked=!!rez.mit_salat;
+  document.getElementById('c-kh').value=rez.kohlenhydrate||'';
+  document.getElementById('confirm-modal').classList.add('open');
+}
+async function saveConfirmRez(){
+  if(!_pendingRez)return;
+  _pendingRez.friedi=document.getElementById('c-friedi').checked;
+  _pendingRez.finn=document.getElementById('c-finn').checked;
+  _pendingRez.mit_salat=document.getElementById('c-salat').checked;
+  _pendingRez.kohlenhydrate=document.getElementById('c-kh').value||null;
+  await saveRez(_pendingRez);
+  _pendingRez=null;
+  closeModal('confirm-modal');
 }
 
 function openManual(){document.getElementById('man-modal').classList.add('open');}

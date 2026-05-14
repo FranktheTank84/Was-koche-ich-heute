@@ -137,7 +137,7 @@
 <div id="login-screen">
   <div class="login-box">
     <div class="login-logo">KüchenBasis</div>
-    <div class="login-sub">Franke Family · Isernhagen</div>
+    <div class="login-sub">was koche ich heute</div>
     <input type="text" id="lu" placeholder="Benutzername" autocomplete="off"/>
     <input type="password" id="lp" placeholder="Passwort"/>
     <button class="btn-primary" onclick="doLogin()">Anmelden</button>
@@ -732,10 +732,10 @@ async function kiVorschlag(){
   result.innerHTML='<div class="ki-loading"><div class="spinner"></div> KI denkt nach...</div>';
   const proteinMap={fisch:'Fisch',rind:'Rind',schwein:'Schwein',haehnchen:'Hähnchen',vegetarisch:'Vegetarisch/Vegan'};
   const khMap={reis:'Reis',nudeln:'Nudeln',kartoffeln:'Kartoffeln',pommes:'Pommes',schupfnudeln:'Schupfnudeln',gnocchi:'Gnocchi',brot:'Brot'};
-  let prompt='Du bist Kochassistent für Familie Franke (Christian, Yvonne';
+  let prompt='Du bist Kochassistent. Herzhafte Küche, viel Umami, keine starke Schärfe, immer frische Komponente dabei. Personen: Christian, Yvonne';
   if(familie.includes('friedi'))prompt+=', Friedi (Kind, wählerisch)';
   if(familie.includes('finn'))prompt+=', Finn (Kind)';
-  prompt+='). Herzhafte Küche, viel Umami, keine starke Schärfe, immer frische Komponente dabei.\n';
+  prompt+='.\n';
   if(protein.length)prompt+=`Gewünschtes Protein: ${protein.map(p=>proteinMap[p]||p).join(', ')}\n`;
   if(kh.length)prompt+=`Gewünschte Beilage/KH: ${kh.map(k=>khMap[k]||k).join(', ')}\n`;
   if(extras.includes('salat'))prompt+='Mit Salat als Beilage\n';

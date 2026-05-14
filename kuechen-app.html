@@ -561,6 +561,22 @@ function mhdInfo(mhd){
   return{cls:'mhd-ok',text:`MHD ${s}`,days};
 }
 
+function inflect(einheit,qty){
+  const m=einheit.match(/^([^(]+?)(\s*\(.+\))?$/);
+  const base=(m?m[1]:einheit).trim(),suffix=m&&m[2]?m[2]:'';
+  const f={
+    'Pakete':{s:'Paket',p:'Pakete'},'Paket':{s:'Paket',p:'Pakete'},
+    'Gläser':{s:'Glas',p:'Gläser'},'Glas':{s:'Glas',p:'Gläser'},
+    'Dosen':{s:'Dose',p:'Dosen'},'Dose':{s:'Dose',p:'Dosen'},
+    'Flasche':{s:'Flasche',p:'Flaschen'},'Flaschen':{s:'Flasche',p:'Flaschen'},
+    'Portionen':{s:'Portion',p:'Portionen'},'Portion':{s:'Portion',p:'Portionen'},
+    'Stück':{s:'Stück',p:'Stück'},
+  };
+  const form=f[base];
+  if(!form)return einheit;
+  return(qty===1?form.s:form.p)+suffix;
+}
+
 function renderB(){
   const list=document.getElementById('bestand-list');
   const warn=document.getElementById('low-warn');
@@ -583,7 +599,7 @@ function renderB(){
       const c=item.qty<=item.min_qty?'qty-low':'qty-ok';
       const m=mhdInfo(item.mhd);
       const mhdHtml=m?`<span class="mhd-badge ${m.cls}">${m.text}</span>`:'';
-      html+=`<div class="bestand-item"><div class="item-emoji">${item.emoji}</div><div class="item-info"><div class="item-name">${item.name}</div><div class="item-meta">${lb[item.ort]}</div>${mhdHtml}</div><div class="item-qty"><button class="qty-btn" onclick="changeQty(${item.id},-1)">−</button><span class="qty-num ${c}">${item.qty} <span style="font-size:11px;font-weight:400">${item.einheit}</span></span><button class="qty-btn" onclick="changeQty(${item.id},1)">+</button></div><button class="item-delete" onclick="delItem(${item.id})">🗑</button></div>`;
+      html+=`<div class="bestand-item"><div class="item-emoji">${item.emoji}</div><div class="item-info"><div class="item-name">${item.name}</div><div class="item-meta">${lb[item.ort]}</div>${mhdHtml}</div><div class="item-qty"><button class="qty-btn" onclick="changeQty(${item.id},-1)">−</button><span class="qty-num ${c}">${item.qty} <span style="font-size:11px;font-weight:400">${inflect(item.einheit,item.qty)}</span></span><button class="qty-btn" onclick="changeQty(${item.id},1)">+</button></div><button class="item-delete" onclick="delItem(${item.id})">🗑</button></div>`;
     });
   }
   list.innerHTML=html;

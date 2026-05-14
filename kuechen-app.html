@@ -495,7 +495,7 @@ async function rezFromUrl(){
   const btn=document.querySelector('[onclick="rezFromUrl()"]');btn.textContent='⏳...';btn.disabled=true;
   try{
     if(!AKEY)return alert('Bitte zuerst den Anthropic API-Key in der Datei eintragen (AKEY).');
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':AKEY,'anthropic-version':'2023-06-01','anthropic-dangerous-allow-browser':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:`Extrahiere das Rezept von dieser URL: ${url}\n\nAntworte NUR mit JSON:\n{"name":"...","emoji":"...","kategorie":"fisch|fleisch|vegetarisch","zeit":"30 Min","portionen":4,"friedi":false,"zutaten":[{"name":"...","menge":500,"einheit":"g"}],"schritte":["Schritt 1"]}`}]})});
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':AKEY,'anthropic-version':'2023-06-01','anthropic-dangerous-allow-browser':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:`Extrahiere das Rezept von dieser URL: ${url}\n\nAntworte NUR mit JSON:\n{"name":"...","emoji":"...","kategorie":"fisch|fleisch|vegetarisch","zeit":"30 Min","portionen":4,"friedi":false,"zutaten":[{"name":"...","menge":500,"einheit":"g"}],"schritte":["Schritt 1"]}`}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
     const rez=JSON.parse(text.replace(/```json|```/g,'').trim());
@@ -512,12 +512,12 @@ async function rezFromFoto(event){
   try{
     const b64=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result.split(',')[1]);fr.onerror=rej;fr.readAsDataURL(file);});
     if(!AKEY){area.innerHTML='<input type="file" id="foto-in" accept="image/*" onchange="rezFromFoto(event)"/><div class="upload-icon">📸</div><div class="upload-text">Buchseite fotografieren & KI liest Rezept aus</div>';area.onclick=()=>document.getElementById('foto-in').click();return alert('Bitte zuerst den Anthropic API-Key in der Datei eintragen (AKEY).');}
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':AKEY,'anthropic-version':'2023-06-01','anthropic-dangerous-allow-browser':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type,data:b64}},{type:'text',text:'Lies das Rezept aus diesem Foto. Antworte NUR mit JSON:\n{"name":"...","emoji":"...","kategorie":"fisch|fleisch|vegetarisch","zeit":"30 Min","portionen":4,"friedi":false,"zutaten":[{"name":"...","menge":500,"einheit":"g"}],"schritte":["Schritt 1"]}'}]}]})});
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':AKEY,'anthropic-version':'2023-06-01','anthropic-dangerous-allow-browser':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type,data:b64}},{type:'text',text:'Lies das Rezept aus diesem Foto. Antworte NUR mit JSON:\n{"name":"...","emoji":"...","kategorie":"fisch|fleisch|vegetarisch","zeit":"30 Min","portionen":4,"friedi":false,"zutaten":[{"name":"...","menge":500,"einheit":"g"}],"schritte":["Schritt 1"]}'}]}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
     const rez=JSON.parse(text.replace(/```json|```/g,'').trim());
     rez.quelle='Foto';await saveRez(rez);
-  }catch(e){alert('Fehler. Bitte manuell eingeben.');}
+  }catch(e){alert('Fehler: '+e.message);}
   area.innerHTML='<input type="file" id="foto-in" accept="image/*" style="display:none" onchange="rezFromFoto(event)"/><div class="upload-icon">📸</div><div class="upload-text">Buchseite fotografieren & KI liest Rezept aus</div>';
 }
 
@@ -548,7 +548,7 @@ async function kiVorschlag(){
   result.innerHTML='<div class="ki-loading"><div class="spinner"></div> KI denkt nach...</div>';
   try{
     if(!AKEY){result.innerHTML='<div class="ki-result" style="color:#c47a7a">Bitte zuerst den Anthropic API-Key in der Datei eintragen (AKEY).</div>';return;}
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':AKEY,'anthropic-version':'2023-06-01','anthropic-dangerous-allow-browser':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:`Du bist Kochassistent für Familie Franke (Christian, Yvonne, Friedi). Herzhafte Küche, viel Umami, keine starke Schärfe, immer frische Komponente dabei.\n${kat?`Kategorie: ${kat}`:''}${zut?`\nVerfügbare Zutaten: ${zut}`:''}\n${rn?`Bekannte Rezepte: ${rn}`:''}\nSchlage 2-3 Gerichte vor. Pro Gericht: Name+Emoji, warum es passt, Hauptzutaten, Kochzeit, ob Friedi es isst. Auf Deutsch, locker.`}]})});
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':AKEY,'anthropic-version':'2023-06-01','anthropic-dangerous-allow-browser':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:`Du bist Kochassistent für Familie Franke (Christian, Yvonne, Friedi). Herzhafte Küche, viel Umami, keine starke Schärfe, immer frische Komponente dabei.\n${kat?`Kategorie: ${kat}`:''}${zut?`\nVerfügbare Zutaten: ${zut}`:''}\n${rn?`Bekannte Rezepte: ${rn}`:''}\nSchlage 2-3 Gerichte vor. Pro Gericht: Name+Emoji, warum es passt, Hauptzutaten, Kochzeit, ob Friedi es isst. Auf Deutsch, locker.`}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
     result.innerHTML=`<div class="ki-result" style="white-space:pre-wrap;line-height:1.6;font-size:14px">${text}</div>`;

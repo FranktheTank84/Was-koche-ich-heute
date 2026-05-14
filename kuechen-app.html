@@ -636,15 +636,17 @@ async function rezFromFoto(event){
   const file=event.target.files[0];if(!file)return;
   const area=document.getElementById('upload-area');
   area.innerHTML='<div class="ki-loading"><div class="spinner"></div> KI liest Rezept aus Foto...</div>';
+  let rez=null;
   try{
     const b64=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result.split(',')[1]);fr.onerror=rej;fr.readAsDataURL(file);});
-    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:b64}},{type:'text',text:'Lies das Rezept aus diesem Foto. Antworte NUR mit JSON:\n{"name":"...","emoji":"...","kategorie":"fisch|fleisch|vegetarisch","zeit":"30 Min","portionen":4,"friedi":false,"zutaten":[{"name":"...","menge":500,"einheit":"g"}],"schritte":["Schritt 1"]}'}]}]})});
+    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:b64}},{type:'text',text:'Lies das Rezept aus diesem Foto. Antworte NUR mit JSON:\n{"name":"...","emoji":"...","kategorie":"fisch|rind|schwein|haehnchen|vegetarisch|vegan","zeit":"30 Min","portionen":4,"friedi":false,"finn":false,"kohlenhydrate":"nudeln|reis|kartoffeln|gnocchi|brot|keins","mit_salat":false,"zutaten":[{"name":"...","menge":500,"einheit":"g"}],"schritte":["Schritt 1"]}'}]}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
-    const rez=JSON.parse(text.replace(/```json|```/g,'').trim());
-    rez.quelle='Foto';openConfirmRez(rez);
-  }catch(e){alert('Fehler: '+e.message);}
+    rez=JSON.parse(text.replace(/```json|```/g,'').trim());
+    rez.quelle='Foto';
+  }catch(e){alert('Fehler beim Auslesen: '+e.message);}
   area.innerHTML='<input type="file" id="foto-in" accept="image/*" style="display:none" onchange="rezFromFoto(event)"/><div class="upload-icon">📸</div><div class="upload-text">Buchseite fotografieren & KI liest Rezept aus</div>';
+  if(rez)openConfirmRez(rez);
 }
 
 let _pendingRez=null;

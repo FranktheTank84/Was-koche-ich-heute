@@ -146,6 +146,7 @@
     <div class="topbar-logo">KüchenBasis</div>
     <div class="topbar-right">
       <span id="sync" class="sync-loading">⟳ Sync...</span>
+      <button class="topbar-logout" onclick="openSettings()">⚙️</button>
       <button class="topbar-logout" onclick="doLogout()">Abmelden</button>
     </div>
   </div>
@@ -258,6 +259,18 @@
 
 <div class="modal-overlay" id="rez-modal"><div class="modal" id="rez-modal-c"></div></div>
 
+<div class="modal-overlay" id="settings-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('settings-modal')">✕</button>
+    <div class="modal-title">⚙️ Einstellungen</div>
+    <div style="clear:both;margin-top:16px"></div>
+    <div style="margin-bottom:8px;font-size:13px;color:var(--text3)">Anthropic API-Key (wird nur lokal gespeichert, nie hochgeladen)</div>
+    <input class="form-input" id="s-akey" type="password" placeholder="sk-ant-api03-..." style="width:100%;margin-bottom:8px"/>
+    <div id="s-akey-status" style="font-size:12px;margin-bottom:12px"></div>
+    <button class="btn-add" style="width:100%" onclick="saveApiKey()">💾 Key speichern</button>
+  </div>
+</div>
+
 <div class="modal-overlay" id="man-modal">
   <div class="modal">
     <button class="modal-close" onclick="closeModal('man-modal')">✕</button>
@@ -290,7 +303,7 @@
 <script>
 const SURL='https://hrvyecfyjwazslfxsouh.supabase.co';
 const SKEY='sb_publishable_kW5MDG_UcZi8IgAlUdwtFA_sbKApqe5';
-const AKEY=''; // 🔑 Deinen Anthropic API-Key hier eintragen
+const AKEY=localStorage.getItem('kb_akey')||'';
 const {createClient}=supabase;
 const db=createClient(SURL,SKEY);
 
@@ -462,6 +475,21 @@ async function abbuchen(id){
 
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 
+function openSettings(){
+  const cur=localStorage.getItem('kb_akey')||'';
+  const inp=document.getElementById('s-akey');
+  inp.value=cur;
+  document.getElementById('s-akey-status').innerHTML=cur?'<span style="color:#8aaa8a">✓ Key gespeichert</span>':'<span style="color:#c47a7a">Kein Key hinterlegt – KI-Funktionen nicht verfügbar</span>';
+  document.getElementById('settings-modal').classList.add('open');
+}
+
+function saveApiKey(){
+  const key=document.getElementById('s-akey').value.trim();
+  if(!key)return alert('Bitte Key eingeben.');
+  localStorage.setItem('kb_akey',key);
+  location.reload();
+}
+
 async function rezFromUrl(){
   const url=document.getElementById('rez-url').value.trim();if(!url)return;
   const btn=document.querySelector('[onclick="rezFromUrl()"]');btn.textContent='⏳...';btn.disabled=true;
@@ -540,6 +568,7 @@ function nav(p,btn){document.querySelectorAll('.page').forEach(x=>x.classList.re
 
 document.getElementById('rez-modal').addEventListener('click',e=>{if(e.target===document.getElementById('rez-modal'))closeModal('rez-modal');});
 document.getElementById('man-modal').addEventListener('click',e=>{if(e.target===document.getElementById('man-modal'))closeModal('man-modal');});
+document.getElementById('settings-modal').addEventListener('click',e=>{if(e.target===document.getElementById('settings-modal'))closeModal('settings-modal');});
 
 if(localStorage.getItem('kb_login')==='1'){document.getElementById('login-screen').style.display='none';document.getElementById('app').style.display='block';init();}
 </script>

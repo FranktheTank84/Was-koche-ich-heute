@@ -213,6 +213,8 @@
         <span class="chip" data-group="kh" data-val="reis" onclick="rChip(this)">🍚 Reis</span>
         <span class="chip" data-group="kh" data-val="nudeln" onclick="rChip(this)">🍝 Nudeln</span>
         <span class="chip" data-group="kh" data-val="kartoffeln" onclick="rChip(this)">🥔 Kartoffeln</span>
+        <span class="chip" data-group="kh" data-val="pommes" onclick="rChip(this)">🍟 Pommes</span>
+        <span class="chip" data-group="kh" data-val="schupfnudeln" onclick="rChip(this)">🥟 Schupfnudeln</span>
         <span class="chip" data-group="kh" data-val="brot" onclick="rChip(this)">🍞 Brot</span>
         <span class="chip" data-group="kh" data-val="gnocchi" onclick="rChip(this)">🫙 Gnocchi</span>
       </div>
@@ -379,6 +381,8 @@
         <option value="nudeln">🍝 Nudeln</option>
         <option value="reis">🍚 Reis</option>
         <option value="kartoffeln">🥔 Kartoffeln</option>
+        <option value="pommes">🍟 Pommes</option>
+        <option value="schupfnudeln">🥟 Schupfnudeln</option>
         <option value="gnocchi">🫙 Gnocchi</option>
         <option value="brot">🍞 Brot</option>
         <option value="keins">Ohne Kohlenhydrate</option>
@@ -557,7 +561,7 @@ function renderR(){
   if(rFilters.extras.has('salat'))f=f.filter(r=>r.mit_salat);
   if(!f.length){list.innerHTML='<div class="empty-state"><div class="empty-icon">📖</div><div class="empty-text">Keine Rezepte gefunden.<br>Filter anpassen oder Rezept hinzufügen.</div></div>';return;}
   list.innerHTML=f.map(r=>{
-    const kh=r.kohlenhydrate?`<span class="tag tag-kh">${{reis:'🍚 Reis',nudeln:'🍝 Nudeln',kartoffeln:'🥔 Kartoffeln',gnocchi:'🫙 Gnocchi',brot:'🍞 Brot'}[r.kohlenhydrate]||r.kohlenhydrate}</span>`:'';
+    const kh=r.kohlenhydrate?`<span class="tag tag-kh">${{reis:'🍚 Reis',nudeln:'🍝 Nudeln',kartoffeln:'🥔 Kartoffeln',pommes:'🍟 Pommes',schupfnudeln:'🥟 Schupfnudeln',gnocchi:'🫙 Gnocchi',brot:'🍞 Brot'}[r.kohlenhydrate]||r.kohlenhydrate}</span>`:'';
     return`<div class="rezept-card" onclick="showRez(${r.id})"><div class="rezept-header"><div class="rezept-emoji">${r.emoji||'🍳'}</div><div class="rezept-info"><div class="rezept-name">${r.name}</div><div class="rezept-tags"><span class="tag ${katCls(r.kategorie)}">${katLabel(r.kategorie)}</span>${r.friedi?'<span class="tag tag-friedi">👧 Friedi</span>':''}${r.finn?'<span class="tag tag-finn">👦 Finn</span>':''}${kh}${r.mit_salat?'<span class="tag tag-salat">🥗 Salat</span>':''}${r.quelle?`<span class="tag">${r.quelle}</span>`:''}</div><div class="rezept-meta"><span>⏱ ${r.zeit||'?'}</span><span>👥 ${r.portionen||4} Port.</span></div></div></div></div>`;
   }).join('');
 }
@@ -571,7 +575,7 @@ function showRez(id){
     <button class="modal-close" onclick="closeModal('rez-modal')">✕</button>
     <div class="modal-title">${r.emoji||'🍳'} ${r.name}</div>
     <div style="clear:both;margin-bottom:8px"></div>
-    <div class="rezept-tags"><span class="tag ${katCls(r.kategorie)}">${katLabel(r.kategorie)}</span>${r.friedi?'<span class="tag tag-friedi">👧 Friedi</span>':''}${r.finn?'<span class="tag tag-finn">👦 Finn</span>':''}${r.kohlenhydrate&&r.kohlenhydrate!=='keins'?`<span class="tag tag-kh">${{reis:'🍚 Reis',nudeln:'🍝 Nudeln',kartoffeln:'🥔 Kartoffeln',gnocchi:'🫙 Gnocchi',brot:'🍞 Brot'}[r.kohlenhydrate]||r.kohlenhydrate}</span>`:''}${r.mit_salat?'<span class="tag tag-salat">🥗 Mit Salat</span>':''}</div>
+    <div class="rezept-tags"><span class="tag ${katCls(r.kategorie)}">${katLabel(r.kategorie)}</span>${r.friedi?'<span class="tag tag-friedi">👧 Friedi</span>':''}${r.finn?'<span class="tag tag-finn">👦 Finn</span>':''}${r.kohlenhydrate&&r.kohlenhydrate!=='keins'?`<span class="tag tag-kh">${{reis:'🍚 Reis',nudeln:'🍝 Nudeln',kartoffeln:'🥔 Kartoffeln',pommes:'🍟 Pommes',schupfnudeln:'🥟 Schupfnudeln',gnocchi:'🫙 Gnocchi',brot:'🍞 Brot'}[r.kohlenhydrate]||r.kohlenhydrate}</span>`:''}${r.mit_salat?'<span class="tag tag-salat">🥗 Mit Salat</span>':''}</div>
     <div class="portionen-row"><span class="portionen-label">Portionen anpassen</span><button class="qty-btn" onclick="chPort(${r.id},-1)">−</button><span class="qty-num" id="mp-${r.id}">${r.cp}</span><button class="qty-btn" onclick="chPort(${r.id},1)">+</button></div>
     <h3>Zutaten</h3><div class="zutaten-list" id="mz-${r.id}">${renderZut(r,r.cp)}</div>
     ${zut.length?`<div class="abbuchen-box"><div class="abbuchen-title">📦 Bestand abbuchen beim Kochen</div>${abb.map(z=>`<div class="abbuchen-item"><span>${z.name}</span><span>−1 Stück</span></div>`).join('')||'<div style="font-size:13px;color:var(--text3)">Keine passenden Artikel im Bestand</div>'}${abb.length?`<button class="btn-add" style="width:100%;margin-top:12px" onclick="abbuchen(${r.id})">✓ Jetzt abbuchen</button>`:''}</div>`:''}
@@ -622,7 +626,7 @@ async function rezFromUrl(){
   const url=document.getElementById('rez-url').value.trim();if(!url)return;
   const btn=document.querySelector('[onclick="rezFromUrl()"]');btn.textContent='⏳...';btn.disabled=true;
   try{
-    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:`Extrahiere das Rezept von dieser URL: ${url}\n\nAntworte NUR mit JSON:\n{"name":"...","emoji":"...","kategorie":"fisch|rind|schwein|haehnchen|vegetarisch|vegan","zeit":"30 Min","portionen":4,"friedi":false,"finn":false,"kohlenhydrate":"nudeln|reis|kartoffeln|gnocchi|brot|keins","mit_salat":false,"zutaten":[{"name":"...","menge":500,"einheit":"g"}],"schritte":["Schritt 1"]}`}]})});
+    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:`Extrahiere das Rezept von dieser URL: ${url}\n\nAntworte NUR mit JSON:\n{"name":"...","emoji":"...","kategorie":"fisch|rind|schwein|haehnchen|vegetarisch|vegan","zeit":"30 Min","portionen":4,"friedi":false,"finn":false,"kohlenhydrate":"nudeln|reis|kartoffeln|pommes|schupfnudeln|gnocchi|brot|keins","mit_salat":false,"zutaten":[{"name":"...","menge":500,"einheit":"g"}],"schritte":["Schritt 1"]}`}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
     const rez=JSON.parse(text.replace(/```json|```/g,'').trim());
@@ -639,7 +643,7 @@ async function rezFromFoto(event){
   let rez=null;
   try{
     const b64=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result.split(',')[1]);fr.onerror=rej;fr.readAsDataURL(file);});
-    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:b64}},{type:'text',text:'Lies das Rezept aus diesem Foto. Antworte NUR mit JSON:\n{"name":"...","emoji":"...","kategorie":"fisch|rind|schwein|haehnchen|vegetarisch|vegan","zeit":"30 Min","portionen":4,"friedi":false,"finn":false,"kohlenhydrate":"nudeln|reis|kartoffeln|gnocchi|brot|keins","mit_salat":false,"zutaten":[{"name":"...","menge":500,"einheit":"g"}],"schritte":["Schritt 1"]}'}]}]})});
+    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:b64}},{type:'text',text:'Lies das Rezept aus diesem Foto. Antworte NUR mit JSON:\n{"name":"...","emoji":"...","kategorie":"fisch|rind|schwein|haehnchen|vegetarisch|vegan","zeit":"30 Min","portionen":4,"friedi":false,"finn":false,"kohlenhydrate":"nudeln|reis|kartoffeln|pommes|schupfnudeln|gnocchi|brot|keins","mit_salat":false,"zutaten":[{"name":"...","menge":500,"einheit":"g"}],"schritte":["Schritt 1"]}'}]}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
     rez=JSON.parse(text.replace(/```json|```/g,'').trim());

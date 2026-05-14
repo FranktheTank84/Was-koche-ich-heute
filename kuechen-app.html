@@ -66,7 +66,7 @@
   .rezept-name{font-weight:600;font-size:15px;color:var(--text);margin-bottom:4px}
   .rezept-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
   .tag{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--text3)}
-  .tag-fisch{border-color:#4a7a9a;color:#7aaaca}.tag-fleisch,.tag-rind,.tag-schwein,.tag-haehnchen{border-color:#8a5a4a;color:#ca8a7a}.tag-vegetarisch,.tag-vegan{border-color:#5a7a5a;color:#8aaa8a}.tag-friedi{border-color:#7a6a4a;color:#aaa06a}.tag-finn{border-color:#4a6a9a;color:#7aaaca}.tag-kh{border-color:#5a5a8a;color:#9a9aca}.tag-salat{border-color:#4a7a5a;color:#7aaa8a}
+  .tag-fisch{border-color:#4a7a9a;color:#7aaaca}.tag-fleisch,.tag-rind,.tag-schwein,.tag-haehnchen{border-color:#8a5a4a;color:#ca8a7a}.tag-vegetarisch,.tag-vegan{border-color:#5a7a5a;color:#8aaa8a}.tag-fruehstueck{border-color:#8a6a3a;color:#c9a06a}.tag-friedi{border-color:#7a6a4a;color:#aaa06a}.tag-finn{border-color:#4a6a9a;color:#7aaaca}.tag-kh{border-color:#5a5a8a;color:#9a9aca}.tag-salat{border-color:#4a7a5a;color:#7aaa8a}
   .filter-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:16px}
   .filter-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 6px}.filter-label:first-child{margin-top:0}
   .filter-chips{display:flex;flex-wrap:wrap;gap:6px}
@@ -207,6 +207,7 @@
         <span class="chip" data-group="protein" data-val="schwein" onclick="rChip(this)">🐷 Schwein</span>
         <span class="chip" data-group="protein" data-val="haehnchen" onclick="rChip(this)">🍗 Hähnchen</span>
         <span class="chip" data-group="protein" data-val="vegetarisch" onclick="rChip(this)">🌿 Veggie</span>
+            <span class="chip" data-group="protein" data-val="fruehstueck" onclick="rChip(this)">🥐 Frühstück</span>
       </div>
       <div class="filter-label">Familie</div>
       <div class="filter-chips">
@@ -266,6 +267,7 @@
             <span class="chip" data-group="protein" data-val="schwein" onclick="kiChip(this)">🐷 Schwein</span>
             <span class="chip" data-group="protein" data-val="haehnchen" onclick="kiChip(this)">🍗 Hähnchen</span>
             <span class="chip" data-group="protein" data-val="vegetarisch" onclick="kiChip(this)">🌿 Veggie</span>
+            <span class="chip" data-group="protein" data-val="fruehstueck" onclick="kiChip(this)">🥐 Frühstück</span>
           </div>
         </div>
         <div class="filter-group">
@@ -368,6 +370,8 @@
       <option value="nudeln">🍝 Nudeln</option>
       <option value="reis">🍚 Reis</option>
       <option value="kartoffeln">🥔 Kartoffeln</option>
+      <option value="pommes">🍟 Pommes</option>
+      <option value="schupfnudeln">🥟 Schupfnudeln</option>
       <option value="gnocchi">🫙 Gnocchi</option>
       <option value="brot">🍞 Brot</option>
       <option value="keins">Ohne Kohlenhydrate</option>
@@ -382,7 +386,7 @@
 <div class="modal-overlay" id="man-modal">
   <div class="modal">
     <button class="modal-close" onclick="closeModal('man-modal')">✕</button>
-    <div class="modal-title">Rezept eingeben</div>
+    <div class="modal-title" id="man-modal-title">Rezept eingeben</div>
     <div style="clear:both;margin-top:16px"></div>
     <div class="form-row">
       <input class="form-input" id="m-name" placeholder="Rezeptname"/>
@@ -396,6 +400,7 @@
         <option value="haehnchen">🍗 Hähnchen</option>
         <option value="vegetarisch">🌿 Vegetarisch</option>
         <option value="vegan">🌱 Vegan</option>
+        <option value="fruehstueck">🥐 Frühstück/Lunch</option>
       </select>
       <input class="form-input" id="m-zeit" placeholder="Zeit (z.B. 30 Min)"/>
       <input class="form-input" id="m-port" type="number" value="4" style="max-width:100px"/>
@@ -554,11 +559,12 @@ function resetRFilter(){
 }
 
 function katLabel(k){
-  return{fisch:'🐟 Fisch',rind:'🥩 Rind',schwein:'🐷 Schwein',haehnchen:'🍗 Hähnchen',vegetarisch:'🌿 Veggie',vegan:'🌱 Vegan',fleisch:'🥩 Fleisch'}[k]||k;
+  return{fisch:'🐟 Fisch',rind:'🥩 Rind',schwein:'🐷 Schwein',haehnchen:'🍗 Hähnchen',vegetarisch:'🌿 Veggie',vegan:'🌱 Vegan',fleisch:'🥩 Fleisch',fruehstueck:'🥐 Frühstück/Lunch'}[k]||k;
 }
 function katCls(k){
   if(k==='fisch')return'tag-fisch';
   if(['vegetarisch','vegan'].includes(k))return'tag-vegetarisch';
+  if(k==='fruehstueck')return'tag-fruehstueck';
   return'tag-fleisch';
 }
 
@@ -622,7 +628,7 @@ function renderR(){
   let f=rezepte;
   if(rFilters.protein.size>0)f=f.filter(r=>{
     const k=r.kategorie||'';
-    return[...rFilters.protein].some(v=>v==='vegetarisch'?['vegetarisch','vegan'].includes(k):k===v||(v!=='fisch'&&k==='fleisch'));
+    return[...rFilters.protein].some(v=>v==='vegetarisch'?['vegetarisch','vegan'].includes(k):v==='fruehstueck'?k==='fruehstueck':k===v||(v!=='fisch'&&v!=='fruehstueck'&&k==='fleisch'));
   });
   if(rFilters.familie.size>0)f=f.filter(r=>
     (rFilters.familie.has('friedi')&&r.friedi)||(rFilters.familie.has('finn')&&r.finn)
@@ -651,7 +657,10 @@ function showRez(id){
     ${zut.length?`<div class="abbuchen-box"><div class="abbuchen-title">📦 Bestand abbuchen beim Kochen</div>${abb.map(z=>`<div class="abbuchen-item"><span>${z.name}</span><span>−1 Stück</span></div>`).join('')||'<div style="font-size:13px;color:var(--text3)">Keine passenden Artikel im Bestand</div>'}${abb.length?`<button class="btn-add" style="width:100%;margin-top:12px" onclick="abbuchen(${r.id})">✓ Jetzt abbuchen</button>`:''}</div>`:''}
     ${r.schritte&&r.schritte.length?`<h3>Zubereitung</h3><div class="schritte-list">${r.schritte.map((s,i)=>`<div class="schritt-row"><div class="schritt-num">${i+1}</div><div>${s}</div></div>`).join('')}</div>`:''}
     ${r.url?`<div style="margin-top:16px"><a href="${r.url}" target="_blank" style="color:var(--accent);font-size:13px">🔗 Originalrezept öffnen</a></div>`:''}
-    <button class="btn-secondary" style="width:100%;margin-top:16px;color:#c47a7a;border-color:#5a3030" onclick="delRez(${r.id})">🗑 Rezept löschen</button>`;
+    <div class="form-row" style="margin-top:16px">
+      <button class="btn-secondary" style="flex:1" onclick="editRez(${r.id})">✏️ Bearbeiten</button>
+      <button class="btn-secondary" style="flex:1;color:#c47a7a;border-color:#5a3030" onclick="delRez(${r.id})">🗑 Löschen</button>
+    </div>`;
   document.getElementById('rez-modal').classList.add('open');
 }
 
@@ -744,15 +753,47 @@ async function saveConfirmRez(){
   closeModal('confirm-modal');
 }
 
-function openManual(){document.getElementById('man-modal').classList.add('open');}
+let _editRezId=null;
+
+function openManual(){
+  _editRezId=null;
+  document.getElementById('man-modal-title').textContent='Rezept eingeben';
+  document.getElementById('man-modal').classList.add('open');
+}
+
+function editRez(id){
+  const r=rezepte.find(x=>x.id===id);if(!r)return;
+  _editRezId=id;
+  document.getElementById('m-name').value=r.name||'';
+  document.getElementById('m-emoji').value=r.emoji||'';
+  document.getElementById('m-kat').value=r.kategorie||'haehnchen';
+  document.getElementById('m-zeit').value=r.zeit||'';
+  document.getElementById('m-port').value=r.portionen||4;
+  document.getElementById('m-friedi').checked=!!r.friedi;
+  document.getElementById('m-finn').checked=!!r.finn;
+  document.getElementById('m-salat').checked=!!r.mit_salat;
+  document.getElementById('m-kh').value=r.kohlenhydrate||'';
+  const zut=Array.isArray(r.zutaten)?r.zutaten:[];
+  document.getElementById('m-zut').value=zut.map(z=>z.menge?`${z.menge}${z.einheit?` ${z.einheit}`:''} ${z.name}`:z.name).join('\n');
+  document.getElementById('m-zub').value=(r.schritte||[]).join('\n');
+  document.getElementById('man-modal-title').textContent='Rezept bearbeiten';
+  closeModal('rez-modal');
+  document.getElementById('man-modal').classList.add('open');
+}
 
 async function saveManual(){
   const name=document.getElementById('m-name').value.trim();if(!name)return alert('Bitte Namen eingeben');
   const zutT=document.getElementById('m-zut').value.trim();
   const zut=zutT.split('\n').filter(z=>z.trim()).map(z=>{const m=z.match(/^([\d.,]+)\s*([a-zA-ZäöüÄÖÜ]+)?\s+(.+)$/);return m?{menge:parseFloat(m[1]),einheit:m[2]||'',name:m[3]}:{name:z.trim(),menge:null,einheit:''};});
   const schritte=document.getElementById('m-zub').value.trim().split('\n').filter(s=>s.trim());
-  const ok=await saveRez({name,emoji:document.getElementById('m-emoji').value||'🍳',kategorie:document.getElementById('m-kat').value,zeit:document.getElementById('m-zeit').value||'?',portionen:parseInt(document.getElementById('m-port').value)||4,friedi:document.getElementById('m-friedi').checked,finn:document.getElementById('m-finn').checked,kohlenhydrate:document.getElementById('m-kh').value||null,mit_salat:document.getElementById('m-salat').checked,zutaten:zut,schritte,quelle:'Manuell'});
-  if(ok){closeModal('man-modal');['m-name','m-emoji','m-zeit','m-zut','m-zub'].forEach(id=>document.getElementById(id).value='');['m-friedi','m-finn','m-salat'].forEach(id=>document.getElementById(id).checked=false);document.getElementById('m-kh').value='';}
+  const data={name,emoji:document.getElementById('m-emoji').value||'🍳',kategorie:document.getElementById('m-kat').value,zeit:document.getElementById('m-zeit').value||'?',portionen:parseInt(document.getElementById('m-port').value)||4,friedi:document.getElementById('m-friedi').checked,finn:document.getElementById('m-finn').checked,kohlenhydrate:document.getElementById('m-kh').value||null,mit_salat:document.getElementById('m-salat').checked,zutaten:zut,schritte};
+  let ok=false;
+  if(_editRezId){
+    try{const{error}=await db.from('rezepte').update(data).eq('id',_editRezId);if(error)throw error;await loadR();renderR();ok=true;}catch(e){alert('Fehler: '+e.message);}
+  }else{
+    ok=await saveRez({...data,quelle:'Manuell'});
+  }
+  if(ok){_editRezId=null;closeModal('man-modal');['m-name','m-emoji','m-zeit','m-zut','m-zub'].forEach(id=>document.getElementById(id).value='');['m-friedi','m-finn','m-salat'].forEach(id=>document.getElementById(id).checked=false);document.getElementById('m-kh').value='';document.getElementById('man-modal-title').textContent='Rezept eingeben';}
 }
 
 function kiChip(el){el.classList.toggle('selected');}

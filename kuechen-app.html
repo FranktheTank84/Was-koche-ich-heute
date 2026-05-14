@@ -177,10 +177,11 @@
           <option value="gefrierschrank">🧊 Gefrierschrank</option>
           <option value="vorrat">🗄️ Vorrat</option>
         </select>
-        <select class="form-select" id="ni-einheit">
-          <option>Stück</option><option>Portionen</option><option>Pakete</option><option>Gläser</option><option>Dosen</option><option>g</option>
+        <select class="form-select" id="ni-einheit" onchange="toggleGroesse()" style="max-width:120px">
+          <option>Stück</option><option>Portionen</option><option>Pakete</option><option>Gläser</option><option>Dosen</option><option>Flasche</option><option>g</option><option>kg</option><option>ml</option><option>l</option>
         </select>
-        <input class="form-input" id="ni-qty" type="number" value="1" min="0" style="max-width:90px"/>
+        <input class="form-input" id="ni-groesse" placeholder="à 500g" title="Inhalt/Größe (optional)" style="max-width:80px;display:none"/>
+        <input class="form-input" id="ni-qty" type="number" value="1" min="0" style="max-width:70px"/>
       </div>
       <div class="form-row">
         <input class="form-input" id="ni-mhd" type="date" style="max-width:180px" title="Mindesthaltbarkeitsdatum"/>
@@ -473,13 +474,24 @@ async function loadR(){
   catch(e){rezepte=JSON.parse(localStorage.getItem('kb_rc')||'[]');}
 }
 
+function toggleGroesse(){
+  const einheit=document.getElementById('ni-einheit').value;
+  const containerUnits=['Pakete','Gläser','Dosen','Flasche','Stück','Portionen'];
+  const el=document.getElementById('ni-groesse');
+  el.style.display=containerUnits.includes(einheit)?'block':'none';
+  if(!containerUnits.includes(einheit))el.value='';
+}
+
 async function addItem(){
   const name=document.getElementById('ni-name').value.trim();
   if(!name)return;
   const mhd=document.getElementById('ni-mhd').value||null;
+  const einheitBase=document.getElementById('ni-einheit').value;
+  const groesse=document.getElementById('ni-groesse').value.trim();
+  const einheit=groesse?`${einheitBase} (${groesse})`:einheitBase;
   try{
-    await db.from('bestand').insert({name,emoji:document.getElementById('ni-emoji').value||'📦',ort:document.getElementById('ni-ort').value,einheit:document.getElementById('ni-einheit').value,qty:parseFloat(document.getElementById('ni-qty').value)||1,min_qty:1,mhd});
-    document.getElementById('ni-name').value='';document.getElementById('ni-emoji').value='';document.getElementById('ni-qty').value='1';document.getElementById('ni-mhd').value='';
+    await db.from('bestand').insert({name,emoji:document.getElementById('ni-emoji').value||'📦',ort:document.getElementById('ni-ort').value,einheit,qty:parseFloat(document.getElementById('ni-qty').value)||1,min_qty:1,mhd});
+    document.getElementById('ni-name').value='';document.getElementById('ni-emoji').value='';document.getElementById('ni-qty').value='1';document.getElementById('ni-mhd').value='';document.getElementById('ni-groesse').value='';
     await loadB();renderB();renderKiZut();
   }catch(e){alert('Fehler: '+e.message);}
 }

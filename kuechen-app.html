@@ -251,14 +251,44 @@
     <div class="section-sub">KI schlägt Rezepte aus eurem Bestand vor</div>
     <div class="ki-box">
       <div class="ki-title">🤖 KI-Vorschläge</div>
-      <div class="ki-sub">Wähle Kategorie und Zutaten</div>
-      <div style="font-size:12px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Kategorie</div>
-      <div class="zutaten-chips" id="ki-kat">
-        <span class="chip" onclick="katChip(this)">🐟 Fisch</span>
-        <span class="chip" onclick="katChip(this)">🥩 Fleisch</span>
-        <span class="chip" onclick="katChip(this)">🥦 Vegetarisch</span>
-        <span class="chip" onclick="katChip(this)">👧 Friedi-tauglich</span>
-        <span class="chip" onclick="katChip(this)">⚡ Schnell &lt;30min</span>
+      <div class="ki-sub">Wähle Filter und Zutaten</div>
+      <div class="filter-panel" style="background:none;padding:0;box-shadow:none">
+        <div class="filter-group">
+          <div class="filter-label">Protein</div>
+          <div class="zutaten-chips">
+            <span class="chip" data-group="protein" data-val="fisch" onclick="kiChip(this)">🐟 Fisch</span>
+            <span class="chip" data-group="protein" data-val="rind" onclick="kiChip(this)">🥩 Rind</span>
+            <span class="chip" data-group="protein" data-val="schwein" onclick="kiChip(this)">🐷 Schwein</span>
+            <span class="chip" data-group="protein" data-val="haehnchen" onclick="kiChip(this)">🍗 Hähnchen</span>
+            <span class="chip" data-group="protein" data-val="vegetarisch" onclick="kiChip(this)">🌿 Veggie</span>
+          </div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-label">Familie</div>
+          <div class="zutaten-chips">
+            <span class="chip" data-group="familie" data-val="friedi" onclick="kiChip(this)">👧 Friedi</span>
+            <span class="chip" data-group="familie" data-val="finn" onclick="kiChip(this)">👦 Finn</span>
+          </div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-label">Kohlenhydrate</div>
+          <div class="zutaten-chips">
+            <span class="chip" data-group="kh" data-val="reis" onclick="kiChip(this)">🍚 Reis</span>
+            <span class="chip" data-group="kh" data-val="nudeln" onclick="kiChip(this)">🍝 Nudeln</span>
+            <span class="chip" data-group="kh" data-val="kartoffeln" onclick="kiChip(this)">🥔 Kartoffeln</span>
+            <span class="chip" data-group="kh" data-val="pommes" onclick="kiChip(this)">🍟 Pommes</span>
+            <span class="chip" data-group="kh" data-val="schupfnudeln" onclick="kiChip(this)">🥟 Schupfnudeln</span>
+            <span class="chip" data-group="kh" data-val="gnocchi" onclick="kiChip(this)">🫙 Gnocchi</span>
+            <span class="chip" data-group="kh" data-val="brot" onclick="kiChip(this)">🍞 Brot</span>
+          </div>
+        </div>
+        <div class="filter-group">
+          <div class="filter-label">Extras</div>
+          <div class="zutaten-chips">
+            <span class="chip" data-group="extras" data-val="salat" onclick="kiChip(this)">🥗 Mit Salat</span>
+            <span class="chip" data-group="extras" data-val="schnell" onclick="kiChip(this)">⚡ Schnell &lt;30min</span>
+          </div>
+        </div>
       </div>
       <div style="font-size:12px;color:var(--text3);margin:12px 0 8px;text-transform:uppercase;letter-spacing:.05em">Zutaten im Bestand</div>
       <div class="zutaten-chips" id="ki-zut"></div>
@@ -685,7 +715,7 @@ async function saveManual(){
   if(ok){closeModal('man-modal');['m-name','m-emoji','m-zeit','m-zut','m-zub'].forEach(id=>document.getElementById(id).value='');['m-friedi','m-finn','m-salat'].forEach(id=>document.getElementById(id).checked=false);document.getElementById('m-kh').value='';}
 }
 
-function katChip(c){document.querySelectorAll('#ki-kat .chip').forEach(x=>x.classList.remove('selected'));c.classList.toggle('selected');}
+function kiChip(el){el.classList.toggle('selected');}
 
 function renderKiZut(){
   const chips=document.getElementById('ki-zut');
@@ -694,13 +724,30 @@ function renderKiZut(){
 }
 
 async function kiVorschlag(){
-  const kat=[...document.querySelectorAll('#ki-kat .chip.selected')].map(c=>c.textContent).join(', ');
+  const sel=g=>[...document.querySelectorAll(`.ki-box .chip[data-group="${g}"].selected`)].map(c=>c.dataset.val);
+  const protein=sel('protein'),familie=sel('familie'),kh=sel('kh'),extras=sel('extras');
   const zut=[...document.querySelectorAll('#ki-zut .chip.selected')].map(c=>c.textContent).join(', ');
   const rn=rezepte.map(r=>r.name).join(', ');
   const result=document.getElementById('ki-result');
   result.innerHTML='<div class="ki-loading"><div class="spinner"></div> KI denkt nach...</div>';
+  const proteinMap={fisch:'Fisch',rind:'Rind',schwein:'Schwein',haehnchen:'Hähnchen',vegetarisch:'Vegetarisch/Vegan'};
+  const khMap={reis:'Reis',nudeln:'Nudeln',kartoffeln:'Kartoffeln',pommes:'Pommes',schupfnudeln:'Schupfnudeln',gnocchi:'Gnocchi',brot:'Brot'};
+  let prompt='Du bist Kochassistent für Familie Franke (Christian, Yvonne';
+  if(familie.includes('friedi'))prompt+=', Friedi (Kind, wählerisch)';
+  if(familie.includes('finn'))prompt+=', Finn (Kind)';
+  prompt+='). Herzhafte Küche, viel Umami, keine starke Schärfe, immer frische Komponente dabei.\n';
+  if(protein.length)prompt+=`Gewünschtes Protein: ${protein.map(p=>proteinMap[p]||p).join(', ')}\n`;
+  if(kh.length)prompt+=`Gewünschte Beilage/KH: ${kh.map(k=>khMap[k]||k).join(', ')}\n`;
+  if(extras.includes('salat'))prompt+='Mit Salat als Beilage\n';
+  if(extras.includes('schnell'))prompt+='Kochzeit unter 30 Minuten\n';
+  if(zut)prompt+=`Verfügbare Zutaten im Bestand: ${zut}\n`;
+  if(rn)prompt+=`Bekannte Rezepte (gerne neu oder Variante): ${rn}\n`;
+  prompt+='Schlage 2-3 konkrete Gerichte vor. Pro Gericht: Name+Emoji, warum es passt, Hauptzutaten, Kochzeit';
+  if(familie.includes('friedi'))prompt+=', ob Friedi es isst';
+  if(familie.includes('finn'))prompt+=', ob Finn es isst';
+  prompt+='. Auf Deutsch, locker.';
   try{
-    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:`Du bist Kochassistent für Familie Franke (Christian, Yvonne, Friedi). Herzhafte Küche, viel Umami, keine starke Schärfe, immer frische Komponente dabei.\n${kat?`Kategorie: ${kat}`:''}${zut?`\nVerfügbare Zutaten: ${zut}`:''}\n${rn?`Bekannte Rezepte: ${rn}`:''}\nSchlage 2-3 Gerichte vor. Pro Gericht: Name+Emoji, warum es passt, Hauptzutaten, Kochzeit, ob Friedi es isst. Auf Deutsch, locker.`}]})});
+    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
     result.innerHTML=`<div class="ki-result" style="white-space:pre-wrap;line-height:1.6;font-size:14px">${text}</div>`;

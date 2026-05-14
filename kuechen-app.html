@@ -203,11 +203,18 @@
         <input class="form-input" id="rez-url" placeholder="URL von Chefkoch, Lecker.de..."/>
         <button class="btn-add" onclick="rezFromUrl()">📎 Laden</button>
       </div>
-      <label class="upload-area" id="upload-area">
-        <input type="file" id="foto-in" accept="image/*" onchange="rezFromFoto(event)"/>
-        <div class="upload-icon">📸</div>
-        <div class="upload-text">Buchseite fotografieren & KI liest Rezept aus</div>
-      </label>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <label class="upload-area" id="upload-area" style="flex:1;margin-bottom:0;padding:20px">
+          <input type="file" id="foto-in" accept="image/*" onchange="rezFromFoto(event)"/>
+          <div class="upload-icon" style="font-size:24px;margin-bottom:4px">🖼️</div>
+          <div class="upload-text">Galerie</div>
+        </label>
+        <label class="upload-area" style="flex:1;margin-bottom:0;padding:20px">
+          <input type="file" id="kamera-in" accept="image/*" capture="environment" onchange="rezFromFoto(event)"/>
+          <div class="upload-icon" style="font-size:24px;margin-bottom:4px">📷</div>
+          <div class="upload-text">Kamera</div>
+        </label>
+      </div>
       <button class="btn-secondary" style="width:100%" onclick="openManual()">✏️ Manuell eingeben</button>
     </div>
     <div id="rezept-list"></div>

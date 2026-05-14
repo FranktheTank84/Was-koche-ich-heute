@@ -715,14 +715,33 @@ async function rezFromUrl(){
   btn.textContent='📎 Laden';btn.disabled=false;
 }
 
+function resizeImage(file,maxPx=1600,quality=0.82){
+  return new Promise((res,rej)=>{
+    const img=new Image();
+    const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      URL.revokeObjectURL(url);
+      let{width:w,height:h}=img;
+      if(w>maxPx||h>maxPx){const s=maxPx/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s);}
+      const c=document.createElement('canvas');c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      c.toBlob(b=>{
+        if(!b)return rej(new Error('Canvas toBlob fehlgeschlagen'));
+        const fr=new FileReader();fr.onload=()=>res(fr.result.split(',')[1]);fr.onerror=rej;fr.readAsDataURL(b);
+      },'image/jpeg',quality);
+    };
+    img.onerror=rej;img.src=url;
+  });
+}
+
 async function rezFromFoto(event){
   const file=event.target.files[0];if(!file)return;
   const area=document.getElementById('upload-area');
   area.innerHTML='<div class="ki-loading"><div class="spinner"></div> KI liest Rezept aus Foto...</div>';
   let rez=null;
   try{
-    const b64=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result.split(',')[1]);fr.onerror=rej;fr.readAsDataURL(file);});
-    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type||'image/jpeg',data:b64}},{type:'text',text:'Lies das Rezept aus diesem Foto. Antworte NUR mit JSON:\n{"name":"...","emoji":"...","kategorie":"fisch|rind|schwein|haehnchen|vegetarisch|vegan","zeit":"30 Min","portionen":4,"friedi":false,"finn":false,"kohlenhydrate":"nudeln|reis|kartoffeln|pommes|schupfnudeln|gnocchi|brot|keins","mit_salat":false,"zutaten":[{"name":"...","menge":500,"einheit":"g"}],"schritte":["Schritt 1"]}'}]}]})});
+    const b64=await resizeImage(file);
+    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:'Lies das Rezept aus diesem Foto. Antworte NUR mit JSON:\n{"name":"...","emoji":"...","kategorie":"fisch|rind|schwein|haehnchen|vegetarisch|vegan|fruehstueck","zeit":"30 Min","portionen":4,"friedi":false,"finn":false,"kohlenhydrate":"nudeln|reis|kartoffeln|pommes|schupfnudeln|gnocchi|brot|keins","mit_salat":false,"zutaten":[{"name":"...","menge":500,"einheit":"g"}],"schritte":["Schritt 1"]}'}]}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
     rez=JSON.parse(text.replace(/```json|```/g,'').trim());

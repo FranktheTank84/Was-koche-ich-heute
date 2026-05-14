@@ -177,6 +177,10 @@
           <option value="gefrierschrank">🧊 Gefrierschrank</option>
           <option value="vorrat">🗄️ Vorrat</option>
         </select>
+        <select class="form-select" id="ni-liste">
+          <option value="woechentlich">📅 Wöchentlich</option>
+          <option value="metro">🏪 Metro</option>
+        </select>
         <select class="form-select" id="ni-einheit" onchange="toggleGroesse()" style="max-width:120px">
           <option>Stück</option><option>Portionen</option><option>Pakete</option><option>Gläser</option><option>Dosen</option><option>Flasche</option><option>g</option><option>kg</option><option>ml</option><option>l</option>
         </select>
@@ -301,6 +305,10 @@
   <div class="page content" id="page-einkauf">
     <div class="section-title">Einkaufsliste</div>
     <div class="section-sub">Automatisch wenn Bestand zu niedrig</div>
+    <div class="tabs" style="margin-bottom:12px">
+      <button class="tab active" id="etab-woche" onclick="einkaufTab('woechentlich',this)">📅 Wöchentlich</button>
+      <button class="tab" id="etab-metro" onclick="einkaufTab('metro',this)">🏪 Metro</button>
+    </div>
     <button class="btn-secondary" style="margin-bottom:16px;width:100%" onclick="clearDone()">✓ Erledigte entfernen</button>
     <div id="einkauf-list"></div>
   </div>
@@ -489,8 +497,9 @@ async function addItem(){
   const einheitBase=document.getElementById('ni-einheit').value;
   const groesse=document.getElementById('ni-groesse').value.trim();
   const einheit=groesse?`${einheitBase} (${groesse})`:einheitBase;
+  const liste=document.getElementById('ni-liste').value;
   try{
-    await db.from('bestand').insert({name,emoji:document.getElementById('ni-emoji').value||'📦',ort:document.getElementById('ni-ort').value,einheit,qty:parseFloat(document.getElementById('ni-qty').value)||1,min_qty:1,mhd});
+    await db.from('bestand').insert({name,emoji:document.getElementById('ni-emoji').value||'📦',ort:document.getElementById('ni-ort').value,einheit,liste,qty:parseFloat(document.getElementById('ni-qty').value)||1,min_qty:1,mhd});
     document.getElementById('ni-name').value='';document.getElementById('ni-emoji').value='';document.getElementById('ni-qty').value='1';document.getElementById('ni-mhd').value='';document.getElementById('ni-groesse').value='';
     await loadB();renderB();renderKiZut();
   }catch(e){alert('Fehler: '+e.message);}
@@ -499,7 +508,7 @@ async function addItem(){
 async function changeQty(id,delta){
   const item=bestand.find(i=>i.id===id);if(!item)return;
   const nq=Math.max(0,item.qty+delta);
-  try{await db.from('bestand').update({qty:nq,updated_at:new Date().toISOString()}).eq('id',id);item.qty=nq;if(nq<=item.min_qty&&nq>0)addToEinkauf(item.name,item.einheit);renderB();renderEinkauf();}
+  try{await db.from('bestand').update({qty:nq,updated_at:new Date().toISOString()}).eq('id',id);item.qty=nq;if(nq<=item.min_qty&&nq>0)addToEinkauf(item.name,item.einheit,item.liste||'woechentlich');renderB();renderEinkauf();}
   catch(e){console.error(e);}
 }
 
@@ -519,8 +528,11 @@ async function delRez(id){
   catch(e){alert('Fehler');}
 }
 
-function addToEinkauf(name,einheit){
-  if(!einkauf.find(e=>e.name===name)){einkauf.push({name,einheit,done:false});localStorage.setItem('kb_einkauf',JSON.stringify(einkauf));renderEinkauf();}}
+let einkaufAktiv='woechentlich';
+function einkaufTab(tab,btn){einkaufAktiv=tab;document.querySelectorAll('#page-einkauf .tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');renderEinkauf();}
+function addToEinkauf(name,einheit,liste='woechentlich'){
+  if(!einkauf.find(e=>e.name===name)){einkauf.push({name,einheit,liste,done:false});localStorage.setItem('kb_einkauf',JSON.stringify(einkauf));renderEinkauf();}}
+function moveToWoche(i){einkauf[i].liste='woechentlich';localStorage.setItem('kb_einkauf',JSON.stringify(einkauf));renderEinkauf();}
 function toggleEinkauf(i){einkauf[i].done=!einkauf[i].done;localStorage.setItem('kb_einkauf',JSON.stringify(einkauf));renderEinkauf();}
 function clearDone(){einkauf=einkauf.filter(e=>!e.done);localStorage.setItem('kb_einkauf',JSON.stringify(einkauf));renderEinkauf();}
 
@@ -784,9 +796,12 @@ async function kiVorschlag(){
 
 function renderEinkauf(){
   const list=document.getElementById('einkauf-list');
-  bestand.filter(i=>i.qty<=i.min_qty).forEach(i=>addToEinkauf(i.name,i.einheit));
-  if(!einkauf.length){list.innerHTML='<div class="empty-state"><div class="empty-icon">🛒</div><div class="empty-text">Einkaufsliste ist leer.<br>Wird automatisch befüllt wenn Bestand zu niedrig.</div></div>';return;}
-  list.innerHTML=einkauf.map((e,i)=>`<div class="einkauf-item"><input type="checkbox" class="einkauf-check" ${e.done?'checked':''} onchange="toggleEinkauf(${i})"/><span class="einkauf-name ${e.done?'einkauf-done':''}">${e.name} <span style="color:var(--text3);font-size:12px">${e.einheit||''}</span></span></div>`).join('');
+  bestand.filter(i=>i.qty<=i.min_qty).forEach(i=>addToEinkauf(i.name,i.einheit,i.liste||'woechentlich'));
+  const sichtbar=einkauf.map((e,i)=>({...e,i})).filter(e=>e.liste===einkaufAktiv);
+  if(!sichtbar.length){
+    const leerText=einkaufAktiv==='metro'?'Keine Metro-Artikel fällig.':'Wochenliste ist leer.';
+    list.innerHTML=`<div class="empty-state"><div class="empty-icon">🛒</div><div class="empty-text">${leerText}<br>Wird automatisch befüllt wenn Bestand zu niedrig.</div></div>`;return;}
+  list.innerHTML=sichtbar.map(e=>`<div class="einkauf-item"><input type="checkbox" class="einkauf-check" ${e.done?'checked':''} onchange="toggleEinkauf(${e.i})"/><span class="einkauf-name ${e.done?'einkauf-done':''}">${e.name} <span style="color:var(--text3);font-size:12px">${e.einheit||''}</span></span>${e.liste==='metro'?`<button onclick="moveToWoche(${e.i})" style="margin-left:auto;font-size:11px;padding:3px 8px;border-radius:20px;border:1px solid var(--accent);color:var(--accent);background:none;cursor:pointer;white-space:nowrap">→ Woche</button>`:''}</div>`).join('');
 }
 
 function nav(p,btn){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));document.getElementById('page-'+p).classList.add('active');btn.classList.add('active');}

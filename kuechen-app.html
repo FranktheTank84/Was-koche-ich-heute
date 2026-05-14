@@ -120,6 +120,12 @@
   ::-webkit-scrollbar{width:4px}
   ::-webkit-scrollbar-track{background:var(--bg)}
   ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+  .mhd-badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500;margin-top:4px}
+  .mhd-ok{background:#1a251a;color:#7aaa7a}
+  .mhd-soon{background:#252310;color:#c8a050}
+  .mhd-danger{background:#2a1a0a;color:#e0803a}
+  .mhd-expired{background:#351515;color:#c47a7a;text-decoration:line-through}
+  .mhd-warn-bar{background:#252310;border:1px solid #5a4a20;border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:#c8a050;margin-bottom:8px;display:flex;align-items:center;gap:8px}
 </style>
 </head>
 <body>
@@ -170,6 +176,10 @@
           <option>Stück</option><option>Portionen</option><option>Pakete</option><option>Gläser</option><option>Dosen</option><option>g</option>
         </select>
         <input class="form-input" id="ni-qty" type="number" value="1" min="0" style="max-width:90px"/>
+      </div>
+      <div class="form-row">
+        <input class="form-input" id="ni-mhd" type="date" style="max-width:180px" title="Mindesthaltbarkeitsdatum"/>
+        <span style="color:var(--text3);font-size:13px;align-self:center;flex:1">MHD (optional)</span>
         <button class="btn-add" onclick="addItem()">+ Hinzufügen</button>
       </div>
     </div>
@@ -280,6 +290,7 @@
 <script>
 const SURL='https://hrvyecfyjwazslfxsouh.supabase.co';
 const SKEY='sb_publishable_kW5MDG_UcZi8IgAlUdwtFA_sbKApqe5';
+const AKEY=''; // 🔑 Deinen Anthropic API-Key hier eintragen
 const {createClient}=supabase;
 const db=createClient(SURL,SKEY);
 
@@ -321,9 +332,10 @@ async function loadR(){
 async function addItem(){
   const name=document.getElementById('ni-name').value.trim();
   if(!name)return;
+  const mhd=document.getElementById('ni-mhd').value||null;
   try{
-    await db.from('bestand').insert({name,emoji:document.getElementById('ni-emoji').value||'📦',ort:document.getElementById('ni-ort').value,einheit:document.getElementById('ni-einheit').value,qty:parseFloat(document.getElementById('ni-qty').value)||1,min_qty:1});
-    document.getElementById('ni-name').value='';document.getElementById('ni-emoji').value='';document.getElementById('ni-qty').value='1';
+    await db.from('bestand').insert({name,emoji:document.getElementById('ni-emoji').value||'📦',ort:document.getElementById('ni-ort').value,einheit:document.getElementById('ni-einheit').value,qty:parseFloat(document.getElementById('ni-qty').value)||1,min_qty:1,mhd});
+    document.getElementById('ni-name').value='';document.getElementById('ni-emoji').value='';document.getElementById('ni-qty').value='1';document.getElementById('ni-mhd').value='';
     await loadB();renderB();renderKiZut();
   }catch(e){alert('Fehler: '+e.message);}
 }
@@ -361,12 +373,27 @@ function renderAll(){renderB();renderR();renderKiZut();renderEinkauf();}
 function bTab(f,btn){document.querySelectorAll('#page-bestand .tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');bFilter=f;renderB();}
 function rTab(f,btn){document.querySelectorAll('#page-rezepte .tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');rFilter=f;renderR();}
 
+function mhdInfo(mhd){
+  if(!mhd)return null;
+  const d=new Date(mhd),t=new Date();t.setHours(0,0,0,0);d.setHours(0,0,0,0);
+  const days=Math.round((d-t)/(1000*60*60*24));
+  const s=d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'2-digit'});
+  if(days<0)return{cls:'mhd-expired',text:`⚠️ Abgelaufen ${s}`,days};
+  if(days<=3)return{cls:'mhd-danger',text:`🔴 MHD ${s} (${days}d)`,days};
+  if(days<=7)return{cls:'mhd-soon',text:`🟡 MHD ${s} (${days}d)`,days};
+  return{cls:'mhd-ok',text:`MHD ${s}`,days};
+}
+
 function renderB(){
   const list=document.getElementById('bestand-list');
   const warn=document.getElementById('low-warn');
   const filtered=bestand.filter(i=>bFilter==='alle'||i.ort===bFilter);
   const low=bestand.filter(i=>i.qty<=i.min_qty&&i.qty>0);
-  warn.innerHTML=low.length?`<div class="warning-badge">⚠️ Bald leer: ${low.map(i=>i.name).join(', ')}</div>`:'';
+  const expiring=bestand.filter(i=>{const m=mhdInfo(i.mhd);return m&&m.days<=7;});
+  let warnHtml='';
+  if(low.length)warnHtml+=`<div class="warning-badge">⚠️ Bald leer: ${low.map(i=>i.name).join(', ')}</div>`;
+  if(expiring.length)warnHtml+=`<div class="mhd-warn-bar">🗓 MHD läuft ab: ${expiring.map(i=>{const m=mhdInfo(i.mhd);return`${i.name} (${m.days<0?'abgelaufen':m.days+'d'})`;}).join(', ')}</div>`;
+  warn.innerHTML=warnHtml;
   if(!filtered.length){list.innerHTML='<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">Noch nichts hier.<br>Artikel oben hinzufügen.</div></div>';return;}
   const g={kuehlschrank:[],gefrierschrank:[],vorrat:[]};
   filtered.forEach(i=>{if(g[i.ort])g[i.ort].push(i);});
@@ -377,7 +404,9 @@ function renderB(){
     if(bFilter==='alle')html+=`<div class="ort-header">${lb[ort]}</div>`;
     items.forEach(item=>{
       const c=item.qty<=item.min_qty?'qty-low':'qty-ok';
-      html+=`<div class="bestand-item"><div class="item-emoji">${item.emoji}</div><div class="item-info"><div class="item-name">${item.name}</div><div class="item-meta">${lb[item.ort]}</div></div><div class="item-qty"><button class="qty-btn" onclick="changeQty(${item.id},-1)">−</button><span class="qty-num ${c}">${item.qty} <span style="font-size:11px;font-weight:400">${item.einheit}</span></span><button class="qty-btn" onclick="changeQty(${item.id},1)">+</button></div><button class="item-delete" onclick="delItem(${item.id})">🗑</button></div>`;
+      const m=mhdInfo(item.mhd);
+      const mhdHtml=m?`<span class="mhd-badge ${m.cls}">${m.text}</span>`:'';
+      html+=`<div class="bestand-item"><div class="item-emoji">${item.emoji}</div><div class="item-info"><div class="item-name">${item.name}</div><div class="item-meta">${lb[item.ort]}</div>${mhdHtml}</div><div class="item-qty"><button class="qty-btn" onclick="changeQty(${item.id},-1)">−</button><span class="qty-num ${c}">${item.qty} <span style="font-size:11px;font-weight:400">${item.einheit}</span></span><button class="qty-btn" onclick="changeQty(${item.id},1)">+</button></div><button class="item-delete" onclick="delItem(${item.id})">🗑</button></div>`;
     });
   }
   list.innerHTML=html;
@@ -437,7 +466,8 @@ async function rezFromUrl(){
   const url=document.getElementById('rez-url').value.trim();if(!url)return;
   const btn=document.querySelector('[onclick="rezFromUrl()"]');btn.textContent='⏳...';btn.disabled=true;
   try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:`Extrahiere das Rezept von dieser URL: ${url}\n\nAntworte NUR mit JSON:\n{"name":"...","emoji":"...","kategorie":"fisch|fleisch|vegetarisch","zeit":"30 Min","portionen":4,"friedi":false,"zutaten":[{"name":"...","menge":500,"einheit":"g"}],"schritte":["Schritt 1"]}`}]})});
+    if(!AKEY)return alert('Bitte zuerst den Anthropic API-Key in der Datei eintragen (AKEY).');
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':AKEY,'anthropic-version':'2023-06-01','anthropic-dangerous-allow-browser':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:`Extrahiere das Rezept von dieser URL: ${url}\n\nAntworte NUR mit JSON:\n{"name":"...","emoji":"...","kategorie":"fisch|fleisch|vegetarisch","zeit":"30 Min","portionen":4,"friedi":false,"zutaten":[{"name":"...","menge":500,"einheit":"g"}],"schritte":["Schritt 1"]}`}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
     const rez=JSON.parse(text.replace(/```json|```/g,'').trim());
@@ -453,7 +483,8 @@ async function rezFromFoto(event){
   area.innerHTML='<div class="ki-loading"><div class="spinner"></div> KI liest Rezept aus Foto...</div>';
   try{
     const b64=await new Promise((res,rej)=>{const fr=new FileReader();fr.onload=()=>res(fr.result.split(',')[1]);fr.onerror=rej;fr.readAsDataURL(file);});
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type,data:b64}},{type:'text',text:'Lies das Rezept aus diesem Foto. Antworte NUR mit JSON:\n{"name":"...","emoji":"...","kategorie":"fisch|fleisch|vegetarisch","zeit":"30 Min","portionen":4,"friedi":false,"zutaten":[{"name":"...","menge":500,"einheit":"g"}],"schritte":["Schritt 1"]}'}]}]})});
+    if(!AKEY){area.innerHTML='<input type="file" id="foto-in" accept="image/*" onchange="rezFromFoto(event)"/><div class="upload-icon">📸</div><div class="upload-text">Buchseite fotografieren & KI liest Rezept aus</div>';area.onclick=()=>document.getElementById('foto-in').click();return alert('Bitte zuerst den Anthropic API-Key in der Datei eintragen (AKEY).');}
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':AKEY,'anthropic-version':'2023-06-01','anthropic-dangerous-allow-browser':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:file.type,data:b64}},{type:'text',text:'Lies das Rezept aus diesem Foto. Antworte NUR mit JSON:\n{"name":"...","emoji":"...","kategorie":"fisch|fleisch|vegetarisch","zeit":"30 Min","portionen":4,"friedi":false,"zutaten":[{"name":"...","menge":500,"einheit":"g"}],"schritte":["Schritt 1"]}'}]}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
     const rez=JSON.parse(text.replace(/```json|```/g,'').trim());
@@ -490,7 +521,8 @@ async function kiVorschlag(){
   const result=document.getElementById('ki-result');
   result.innerHTML='<div class="ki-loading"><div class="spinner"></div> KI denkt nach...</div>';
   try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:`Du bist Kochassistent für Familie Franke (Christian, Yvonne, Friedi). Herzhafte Küche, viel Umami, keine starke Schärfe, immer frische Komponente dabei.\n${kat?`Kategorie: ${kat}`:''}${zut?`\nVerfügbare Zutaten: ${zut}`:''}\n${rn?`Bekannte Rezepte: ${rn}`:''}\nSchlage 2-3 Gerichte vor. Pro Gericht: Name+Emoji, warum es passt, Hauptzutaten, Kochzeit, ob Friedi es isst. Auf Deutsch, locker.`}]})});
+    if(!AKEY){result.innerHTML='<div class="ki-result" style="color:#c47a7a">Bitte zuerst den Anthropic API-Key in der Datei eintragen (AKEY).</div>';return;}
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':AKEY,'anthropic-version':'2023-06-01','anthropic-dangerous-allow-browser':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:`Du bist Kochassistent für Familie Franke (Christian, Yvonne, Friedi). Herzhafte Küche, viel Umami, keine starke Schärfe, immer frische Komponente dabei.\n${kat?`Kategorie: ${kat}`:''}${zut?`\nVerfügbare Zutaten: ${zut}`:''}\n${rn?`Bekannte Rezepte: ${rn}`:''}\nSchlage 2-3 Gerichte vor. Pro Gericht: Name+Emoji, warum es passt, Hauptzutaten, Kochzeit, ob Friedi es isst. Auf Deutsch, locker.`}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
     result.innerHTML=`<div class="ki-result" style="white-space:pre-wrap;line-height:1.6;font-size:14px">${text}</div>`;

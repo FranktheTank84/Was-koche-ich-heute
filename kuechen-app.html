@@ -1015,6 +1015,8 @@ async function kiWochenplan(){
   prompt+=`\nPERSONEN: ${personen.map(p=>PERSONEN_DE[p]).join(', ')}\n`;
   prompt+=`MAHLZEITEN: ${mahlzeiten.map(m=>MAHLZEIT_DE[m]).join(', ')}\n`;
   if(prefs.length)prompt+=`VORLIEBEN: ${prefs.join(', ')}\n`;
+  prompt+=`\nZIEL: Gesünder essen und langfristig abnehmen — bevorzuge ausgewogene, proteinreiche, ballaststoffreiche Gerichte. Wenig Fertigprodukte, viel Gemüse, moderate Kohlenhydrate.\n`;
+  if(mahlzeiten.includes('unterwegs'))prompt+=`\nUNTERWEGS-REGELN (für Christian): Er isst im Auto während der Fahrt. Die Mahlzeit muss ohne Besteck essbar sein (z.B. Wraps, belegte Brote, Finger Food, Snackboxen). Eine Kühlbox ist dabei — kühlpflichtige Sachen sind kein Problem. Bitte besonders auf gesund und kalorienarm achten.\n`;
   prompt+=`\nAntworte NUR mit validem JSON in exakt diesem Format (keine Erklärung, kein Markdown):\n`;
   prompt+=`{"montag":{"mittag":{"familie":["Gericht A","Beilage B"]},"abendessen":{"familie":["Gericht C"],"friedi":["Kindergericht"]}},"dienstag":{...},...}\n`;
   prompt+=`\nRegeln:\n- Nutze unsere Rezeptnamen exakt wenn passend, erfinde neue Ideen wenn nötig\n- Mehrere Einträge im Array für Kombinationen (z.B. Hauptgericht + Salat)\n- Nur ausgewählte Personen und Mahlzeiten einschließen\n- Abwechslungsreich, nicht 2x dasselbe Hauptgericht\n- Für Kinder kindgerechte Portionen/Gerichte`;
@@ -1154,7 +1156,9 @@ async function kiVorschlag(){
   prompt+='- Greife auf unsere Rezepte zurück wenn passend, erfinde aber eigene Ideen wenn etwas fehlt oder es besser passt\n';
   prompt+='- Bei neuen Gerichten: kurze Zutaten und Zubereitung nennen\n';
   prompt+='- Dessert nur wenn sinnvoll, nicht zwingend\n';
-  prompt+='- Schlage 2-3 vollständige Mahlzeiten vor\n\n';
+  prompt+='- Schlage 2-3 vollständige Mahlzeiten vor\n';
+  prompt+='- GESUNDHEITSZIEL: Gesünder essen und abnehmen — bevorzuge ausgewogene, proteinreiche, ballaststoffreiche Gerichte, wenig Fertigprodukte, viel Gemüse, moderate Kohlenhydrate\n\n';
+  if(protein.includes('unterwegs'))prompt+='UNTERWEGS-KONTEXT: Christian isst heute im Auto während der Fahrt. Bitte nur Gerichte vorschlagen die ohne Besteck essbar sind (Wraps, belegte Brote, Sandwiches, Finger Food, Snackboxen). Eine Kühlbox ist vorhanden — kühlpflichtige Sachen sind erlaubt. Besonders auf gesund und kalorienarm achten.\n\n';
 
   prompt+='PERSONEN: Christian, Yvonne';
   if(familie.includes('friedi'))prompt+=', Friedi (Kind, wählerisch)';

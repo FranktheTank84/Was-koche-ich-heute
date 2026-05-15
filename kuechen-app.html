@@ -867,32 +867,32 @@ async function rezFromUrl(){
   btn.textContent='📎 Laden';btn.disabled=false;
 }
 
-function resizeImage(file,maxPx=1100,quality=0.78){
+async function resizeImage(file,maxPx=1100,quality=0.78){
+  // createImageBitmap direkt auf der Datei — effizienter als Image+ObjectURL,
+  // kein separater Decode-Schritt, funktioniert besser auf Android mit großen Fotos
+  let bitmap;
+  try{
+    bitmap=await createImageBitmap(file);
+  }catch(e){
+    throw new Error('Foto konnte nicht geöffnet werden (Format evtl. nicht unterstützt)');
+  }
+  let{width:w,height:h}=bitmap;
+  if(w>maxPx||h>maxPx){const s=maxPx/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s);}
+  const c=document.createElement('canvas');c.width=w;c.height=h;
+  try{
+    c.getContext('2d').drawImage(bitmap,0,0,w,h);
+  }finally{
+    bitmap.close(); // GPU-Speicher sofort freigeben
+  }
   return new Promise((res,rej)=>{
-    const img=new Image();
-    const url=URL.createObjectURL(file);
-    const cleanup=()=>{try{URL.revokeObjectURL(url);}catch(e){}};
-    img.onload=()=>{
-      cleanup();
-      let{width:w,height:h}=img;
-      if(w>maxPx||h>maxPx){const s=maxPx/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s);}
-      let c;
-      try{
-        c=document.createElement('canvas');c.width=w;c.height=h;
-        c.getContext('2d').drawImage(img,0,0,w,h);
-        img.src=''; // Bild-Speicher freigeben
-      }catch(err){if(c){c.width=0;c.height=0;}return rej(err);}
-      c.toBlob(b=>{
-        c.width=0;c.height=0; // Canvas-Speicher sofort freigeben
-        if(!b)return rej(new Error('Bild konnte nicht verarbeitet werden'));
-        const fr=new FileReader();
-        fr.onload=()=>res(fr.result.split(',')[1]);
-        fr.onerror=()=>rej(new Error('Foto konnte nicht eingelesen werden'));
-        fr.readAsDataURL(b);
-      },'image/jpeg',quality);
-    };
-    img.onerror=()=>{cleanup();rej(new Error('Foto konnte nicht geladen werden'));};
-    img.src=url;
+    c.toBlob(b=>{
+      c.width=0;c.height=0; // Canvas-Speicher freigeben
+      if(!b)return rej(new Error('Bild konnte nicht komprimiert werden'));
+      const fr=new FileReader();
+      fr.onload=()=>res(fr.result.split(',')[1]);
+      fr.onerror=()=>rej(new Error('Foto konnte nicht eingelesen werden'));
+      fr.readAsDataURL(b);
+    },'image/jpeg',quality);
   });
 }
 

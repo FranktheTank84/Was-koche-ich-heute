@@ -151,6 +151,13 @@
   .plan-picker-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);cursor:pointer;border-radius:var(--radius-sm);transition:background .15s}
   .plan-picker-item:last-child{border-bottom:none}
   .plan-picker-item:hover{background:var(--surface2);margin:0 -4px;padding:11px 4px}
+  .plan-rez-chips{display:flex;flex-wrap:wrap;gap:5px;align-items:center;flex:1;min-width:0}
+  .plan-rez-chip{display:inline-flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 9px;font-size:12px;max-width:100%}
+  .plan-chip-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px}
+  .plan-chip-cook{background:none;border:none;cursor:pointer;padding:0 2px;font-size:11px;color:var(--accent);font-family:'DM Sans',sans-serif}
+  .plan-chip-del{background:none;border:none;cursor:pointer;padding:0;font-size:13px;color:var(--text3);font-family:'DM Sans',sans-serif;line-height:1}
+  .plan-add-chip{background:none;border:1px dashed var(--border);border-radius:20px;padding:4px 11px;font-size:13px;color:var(--text3);cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;transition:all .15s}
+  .plan-add-chip:hover{border-color:var(--accent);color:var(--accent)}
   .plan-slot-group{border-bottom:1px solid var(--border)}
   .plan-slot-group:last-child{border-bottom:none}
   .plan-mahlzeit-header{padding:7px 16px 3px;font-size:10px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;background:rgba(200,169,110,.06)}
@@ -1039,9 +1046,12 @@ function renderPlan(){
     const slots=MAHLZEITEN.map(m=>{
       const slotData=dayPlan[m]||{};
       const personRows=PERSONEN.map(p=>{
-        const rez=slotData[p];
-        if(rez){return `<div class="plan-person-row"><span class="plan-person-label">${PERSONEN_L[p]}</span><div class="plan-rez-row"><span class="plan-rez-name">${rez.emoji||'🍳'} ${rez.name}</span><div style="display:flex;gap:4px;flex-shrink:0">${isToday?`<button class="plan-btn-cook" onclick="planKochen('${key}','${tag}','${m}','${p}')">▶</button>`:''}<button class="plan-btn-remove" onclick="planRemove('${key}','${tag}','${m}','${p}')">✕</button></div></div></div>`;}
-        else{return `<div class="plan-person-row plan-person-empty" onclick="planChoose('${key}','${tag}','${m}','${p}')"><span class="plan-person-label">${PERSONEN_L[p]}</span><span class="plan-add-label">+ wählen</span></div>`;}
+        const raw=slotData[p];
+        const arr=Array.isArray(raw)?raw:(raw?[raw]:[]);
+        const chips=arr.map((rez,ri)=>
+          `<span class="plan-rez-chip"><span class="plan-chip-name">${rez.emoji||'🍳'} ${rez.name}</span>${isToday?`<button class="plan-chip-cook" onclick="planKochen('${key}','${tag}','${m}','${p}',${ri})">▶</button>`:''}<button class="plan-chip-del" onclick="planRemove('${key}','${tag}','${m}','${p}',${ri})">✕</button></span>`
+        ).join('');
+        return `<div class="plan-person-row"><span class="plan-person-label">${PERSONEN_L[p]}</span><div class="plan-rez-chips">${chips}<button class="plan-add-chip" onclick="planChoose('${key}','${tag}','${m}','${p}')">+</button></div></div>`;
       }).join('');
       return `<div class="plan-slot-group"><div class="plan-mahlzeit-header">${MAHLZEITEN_L[m]}</div>${personRows}</div>`;
     }).join('');
@@ -1081,20 +1091,28 @@ async function planSet(id){
   if(!wochenplan[key])wochenplan[key]={};
   if(!wochenplan[key][tag])wochenplan[key][tag]={};
   if(!wochenplan[key][tag][mahlzeit])wochenplan[key][tag][mahlzeit]={};
-  wochenplan[key][tag][mahlzeit][_planPerson]={id:r.id,name:r.name,emoji:r.emoji||'🍳'};
+  const slot=wochenplan[key][tag][mahlzeit];
+  // Backward-compat: falls noch altes Format (Objekt statt Array)
+  if(!Array.isArray(slot[_planPerson]))slot[_planPerson]=slot[_planPerson]?[slot[_planPerson]]:[];
+  slot[_planPerson].push({id:r.id,name:r.name,emoji:r.emoji||'🍳'});
   await saveWochenplan(key);
   closeModal('plan-modal');renderPlan();
 }
 
-async function planRemove(key,tag,mahlzeit,person){
-  if(wochenplan[key]?.[tag]?.[mahlzeit]){
-    delete wochenplan[key][tag][mahlzeit][person];
-    await saveWochenplan(key);renderPlan();
-  }
+async function planRemove(key,tag,mahlzeit,person,index){
+  const slot=wochenplan[key]?.[tag]?.[mahlzeit];
+  if(!slot)return;
+  const arr=Array.isArray(slot[person])?slot[person]:(slot[person]?[slot[person]]:[]);
+  arr.splice(index,1);
+  slot[person]=arr.length?arr:undefined;
+  if(!slot[person])delete slot[person];
+  await saveWochenplan(key);renderPlan();
 }
 
-function planKochen(key,tag,mahlzeit,person){
-  const rez=wochenplan[key]?.[tag]?.[mahlzeit]?.[person];if(!rez)return;
+function planKochen(key,tag,mahlzeit,person,index){
+  const raw=wochenplan[key]?.[tag]?.[mahlzeit]?.[person];
+  const rez=Array.isArray(raw)?raw[index]:raw;
+  if(!rez)return;
   nav('rezepte',document.querySelectorAll('.nav-btn')[1]);
   setTimeout(()=>showRez(rez.id),100);
 }

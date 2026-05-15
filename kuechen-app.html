@@ -1049,7 +1049,7 @@ function renderPlan(){
         const raw=slotData[p];
         const arr=Array.isArray(raw)?raw:(raw?[raw]:[]);
         const chips=arr.map((rez,ri)=>
-          `<span class="plan-rez-chip"><span class="plan-chip-name">${rez.emoji||'🍳'} ${rez.name}</span>${isToday?`<button class="plan-chip-cook" onclick="planKochen('${key}','${tag}','${m}','${p}',${ri})">▶</button>`:''}<button class="plan-chip-del" onclick="planRemove('${key}','${tag}','${m}','${p}',${ri})">✕</button></span>`
+          `<span class="plan-rez-chip" onclick="planKochen('${key}','${tag}','${m}','${p}',${ri})" style="cursor:pointer" title="Rezept öffnen"><span class="plan-chip-name">${rez.emoji||'🍳'} ${rez.name}</span><button class="plan-chip-del" onclick="event.stopPropagation();planRemove('${key}','${tag}','${m}','${p}',${ri})">✕</button></span>`
         ).join('');
         return `<div class="plan-person-row"><span class="plan-person-label">${PERSONEN_L[p]}</span><div class="plan-rez-chips">${chips}<button class="plan-add-chip" onclick="planChoose('${key}','${tag}','${m}','${p}')">+</button></div></div>`;
       }).join('');

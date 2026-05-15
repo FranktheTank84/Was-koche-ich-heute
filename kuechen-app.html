@@ -151,6 +151,12 @@
   .plan-picker-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);cursor:pointer;border-radius:var(--radius-sm);transition:background .15s}
   .plan-picker-item:last-child{border-bottom:none}
   .plan-picker-item:hover{background:var(--surface2);margin:0 -4px;padding:11px 4px}
+  .plan-slot-group{border-bottom:1px solid var(--border)}
+  .plan-slot-group:last-child{border-bottom:none}
+  .plan-mahlzeit-header{padding:7px 16px 3px;font-size:10px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;background:rgba(200,169,110,.06)}
+  .plan-person-row{display:flex;align-items:center;gap:10px;padding:6px 16px;min-height:34px;transition:background .15s}
+  .plan-person-empty{cursor:pointer}.plan-person-empty:hover{background:var(--surface2)}
+  .plan-person-label{font-size:11px;color:var(--text3);width:62px;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -369,7 +375,7 @@
     <button class="nav-btn" onclick="nav('einkauf',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg>Einkauf
     </button>
-    <button class="nav-btn" onclick="nav('plan',this)">
+    <button class="nav-btn" onclick="nav('plan',this);planLoadAndRender()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></svg>Plan
     </button>
   </nav>
@@ -378,8 +384,13 @@
 <div class="modal-overlay" id="plan-modal">
   <div class="modal">
     <button class="modal-close" onclick="closeModal('plan-modal')">✕</button>
-    <div class="modal-title">Rezept für diesen Slot</div>
+    <div class="modal-title" id="plan-modal-title">Rezept wählen</div>
     <div style="clear:both;margin-top:12px"></div>
+    <div class="tabs" style="margin-bottom:12px" id="plan-person-tabs">
+      <button class="tab active" data-person="familie" onclick="planPersonTab('familie',this)">👨‍👩‍ Familie</button>
+      <button class="tab" data-person="friedi" onclick="planPersonTab('friedi',this)">👧 Friedi</button>
+      <button class="tab" data-person="finn" onclick="planPersonTab('finn',this)">👦 Finn</button>
+    </div>
     <input class="form-input" id="plan-search" placeholder="Rezept suchen…" oninput="renderPlanPicker()" style="width:100%;margin-bottom:12px"/>
     <div id="plan-picker-list"></div>
   </div>
@@ -601,7 +612,7 @@ function moveToWoche(i){einkauf[i].liste='woechentlich';localStorage.setItem('kb
 function toggleEinkauf(i){einkauf[i].done=!einkauf[i].done;localStorage.setItem('kb_einkauf',JSON.stringify(einkauf));renderEinkauf();}
 function clearDone(){einkauf=einkauf.filter(e=>!e.done);localStorage.setItem('kb_einkauf',JSON.stringify(einkauf));renderEinkauf();}
 
-function renderAll(){renderB();renderR();renderKiZut();renderEinkauf();renderPlan();}
+function renderAll(){renderB();renderR();renderKiZut();renderEinkauf();}
 
 function bTab(f,btn){document.querySelectorAll('#page-bestand .tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');bFilter=f;renderB();}
 
@@ -912,8 +923,8 @@ async function kiVorschlag(){
   const proteinMap={fisch:'Fisch',rind:'Rind',schwein:'Schwein',haehnchen:'Hähnchen',vegetarisch:'Vegetarisch/Vegan',fruehstueck:'Frühstück/Lunch',dessert:'Dessert',salat_rez:'Salat',dressing:'Dressing',dips:'Dips'};
   const khMap={reis:'Reis',nudeln:'Nudeln',kartoffeln:'Kartoffeln',pommes:'Pommes',schupfnudeln:'Schupfnudeln',gnocchi:'Gnocchi',brot:'Brot'};
 
-  let prompt='Du bist Kochassistent. Schlage Mahlzeiten NUR aus den folgenden vorhandenen Rezepten vor — erfinde keine neuen Rezepte.\n\n';
-  prompt+=`VERFÜGBARE REZEPTE:\n`;
+  let prompt='Du bist Kochassistent. Nutze unsere vorhandenen Rezepte als Basis — kombiniere sie zu kompletten Mahlzeiten oder ergänze sie mit eigenen Ideen. Wenn wir für eine Kategorie keine passenden Rezepte haben, schlage gerne eigene neue Gerichte vor.\n\n';
+  prompt+=`UNSERE VORHANDENEN REZEPTE:\n`;
   if(haupt.length)prompt+=`Hauptgerichte: ${rList(haupt)}\n`;
   if(salate.length)prompt+=`Salate: ${rList(salate)}\n`;
   if(dressings.length)prompt+=`Dressings: ${rList(dressings)}\n`;
@@ -923,9 +934,10 @@ async function kiVorschlag(){
   prompt+='\n';
 
   prompt+='ANWEISUNG:\n';
-  prompt+='- Kombiniere Rezepte zu kompletten Mahlzeiten (z.B. Hauptgericht + passender Salat + Dressing)\n';
-  prompt+='- Falls ein Hauptgericht keine Beilage hat, ergänze eine passende Beilage (Beilagenvorschlag als Text, kein separates Rezept nötig)\n';
-  prompt+='- Dessert nur wenn sinnvoll und vorhanden, nicht zwingend\n';
+  prompt+='- Baue vollständige Mahlzeiten: Hauptgericht + passende Beilage + ggf. Salat/Dressing/Soße\n';
+  prompt+='- Greife auf unsere Rezepte zurück wenn passend, erfinde aber eigene Ideen wenn etwas fehlt oder es besser passt\n';
+  prompt+='- Bei neuen Gerichten: kurze Zutaten und Zubereitung nennen\n';
+  prompt+='- Dessert nur wenn sinnvoll, nicht zwingend\n';
   prompt+='- Schlage 2-3 vollständige Mahlzeiten vor\n\n';
 
   prompt+='PERSONEN: Christian, Yvonne';
@@ -963,21 +975,42 @@ function renderEinkauf(){
 }
 
 // ── Wochenplan ─────────────────────────────────────────────────────
-let wochenplan=JSON.parse(localStorage.getItem('kb_wochenplan')||'{}');
+// ── Wochenplan ─────────────────────────────────────────────────────
+let wochenplan={};
 let planWeekOffset=0;
-let _planSlot=null;
+let _planSlot=null; // {key,tag,mahlzeit,person}
+let _planPerson='familie';
 const WOCHENTAGE=['montag','dienstag','mittwoch','donnerstag','freitag','samstag','sonntag'];
 const WOCHENTAGE_L=['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
 const MAHLZEITEN=['fruehstueck','mittag','abendessen','snack','dessert'];
 const MAHLZEITEN_L={fruehstueck:'☀️ Frühstück',mittag:'🕛 Mittag',abendessen:'🌙 Abendessen',snack:'🍎 Snack',dessert:'🍮 Dessert'};
+const PERSONEN=['familie','friedi','finn'];
+const PERSONEN_L={familie:'👨‍👩 Alle',friedi:'👧 Friedi',finn:'👦 Finn'};
 
 function isoWeek(d){const t=new Date(d);t.setHours(0,0,0,0);t.setDate(t.getDate()+3-(t.getDay()+6)%7);const w1=new Date(t.getFullYear(),0,4);return 1+Math.round(((t-w1)/86400000-3+(w1.getDay()+6)%7)/7);}
 function weekMonday(offset){const d=new Date();d.setDate(d.getDate()+offset*7);const day=d.getDay();d.setDate(d.getDate()-(day===0?6:day-1));d.setHours(0,0,0,0);return d;}
 function weekDates(offset){const m=weekMonday(offset);return Array.from({length:7},(_,i)=>{const d=new Date(m);d.setDate(m.getDate()+i);return d;});}
 function weekKey(offset){const m=weekMonday(offset);return `${m.getFullYear()}-W${String(isoWeek(m)).padStart(2,'0')}`;}
 
-function planPrevWeek(){planWeekOffset--;renderPlan();}
-function planNextWeek(){planWeekOffset++;renderPlan();}
+async function loadWochenplan(key){
+  try{
+    const{data}=await db.from('wochenplan').select('plan').eq('week_key',key).single();
+    if(data?.plan)wochenplan[key]=data.plan;
+    else wochenplan[key]={};
+  }catch(e){wochenplan[key]={};}
+}
+async function saveWochenplan(key){
+  try{await db.from('wochenplan').upsert({week_key:key,plan:wochenplan[key]||{},updated_at:new Date().toISOString()},{onConflict:'week_key'});}
+  catch(e){console.error('Wochenplan save error',e);}
+}
+
+function planPrevWeek(){planWeekOffset--;planLoadAndRender();}
+function planNextWeek(){planWeekOffset++;planLoadAndRender();}
+async function planLoadAndRender(){
+  const key=weekKey(planWeekOffset);
+  if(!wochenplan[key])await loadWochenplan(key);
+  renderPlan();
+}
 
 function renderPlan(){
   const key=weekKey(planWeekOffset);
@@ -992,16 +1025,30 @@ function renderPlan(){
     const date=dates[i];const isToday=date.getTime()===today.getTime();
     const dayPlan=week[tag]||{};
     const slots=MAHLZEITEN.map(m=>{
-      const rez=dayPlan[m];
-      if(rez){return `<div class="plan-slot plan-slot-filled"><span class="plan-mahlzeit-label">${MAHLZEITEN_L[m]}</span><div class="plan-rez-row"><span class="plan-rez-name">${rez.emoji||'🍳'} ${rez.name}</span><div style="display:flex;gap:6px;flex-shrink:0">${isToday?`<button class="plan-btn-cook" onclick="planKochen('${key}','${tag}','${m}')">▶ Kochen</button>`:''}<button class="plan-btn-remove" onclick="planRemove('${key}','${tag}','${m}')">✕</button></div></div></div>`;}
-      else{return `<div class="plan-slot plan-slot-empty" onclick="planChoose('${key}','${tag}','${m}')"><span class="plan-mahlzeit-label">${MAHLZEITEN_L[m]}</span><span class="plan-add-label">+ Rezept wählen</span></div>`;}
+      const slotData=dayPlan[m]||{};
+      const personRows=PERSONEN.map(p=>{
+        const rez=slotData[p];
+        if(rez){return `<div class="plan-person-row"><span class="plan-person-label">${PERSONEN_L[p]}</span><div class="plan-rez-row"><span class="plan-rez-name">${rez.emoji||'🍳'} ${rez.name}</span><div style="display:flex;gap:4px;flex-shrink:0">${isToday?`<button class="plan-btn-cook" onclick="planKochen('${key}','${tag}','${m}','${p}')">▶</button>`:''}<button class="plan-btn-remove" onclick="planRemove('${key}','${tag}','${m}','${p}')">✕</button></div></div></div>`;}
+        else{return `<div class="plan-person-row plan-person-empty" onclick="planChoose('${key}','${tag}','${m}','${p}')"><span class="plan-person-label">${PERSONEN_L[p]}</span><span class="plan-add-label">+ wählen</span></div>`;}
+      }).join('');
+      return `<div class="plan-slot-group"><div class="plan-mahlzeit-header">${MAHLZEITEN_L[m]}</div>${personRows}</div>`;
     }).join('');
     return `<div class="plan-day${isToday?' plan-day-today':''}"><div class="plan-day-header"><span>${WOCHENTAGE_L[i]}</span><span class="plan-day-date">${date.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})}</span></div>${slots}</div>`;
   }).join('');
 }
 
-function planChoose(key,tag,mahlzeit){
+function planPersonTab(person,btn){
+  _planPerson=person;
+  document.querySelectorAll('#plan-person-tabs .tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('plan-modal-title').textContent=`Rezept für ${PERSONEN_L[person]}`;
+}
+
+function planChoose(key,tag,mahlzeit,person='familie'){
   _planSlot={key,tag,mahlzeit};
+  _planPerson=person;
+  document.querySelectorAll('#plan-person-tabs .tab').forEach(t=>{t.classList.toggle('active',t.dataset.person===person);});
+  document.getElementById('plan-modal-title').textContent=`Rezept für ${PERSONEN_L[person]}`;
   if(document.getElementById('plan-search'))document.getElementById('plan-search').value='';
   renderPlanPicker();
   document.getElementById('plan-modal').classList.add('open');
@@ -1015,23 +1062,27 @@ function renderPlanPicker(){
     :'<div style="color:var(--text3);padding:16px;text-align:center;font-size:14px">Keine Rezepte gefunden</div>';
 }
 
-function planSet(id){
+async function planSet(id){
   if(!_planSlot)return;
   const r=rezepte.find(x=>x.id===id);if(!r)return;
   const{key,tag,mahlzeit}=_planSlot;
   if(!wochenplan[key])wochenplan[key]={};
   if(!wochenplan[key][tag])wochenplan[key][tag]={};
-  wochenplan[key][tag][mahlzeit]={id:r.id,name:r.name,emoji:r.emoji||'🍳'};
-  localStorage.setItem('kb_wochenplan',JSON.stringify(wochenplan));
+  if(!wochenplan[key][tag][mahlzeit])wochenplan[key][tag][mahlzeit]={};
+  wochenplan[key][tag][mahlzeit][_planPerson]={id:r.id,name:r.name,emoji:r.emoji||'🍳'};
+  await saveWochenplan(key);
   closeModal('plan-modal');renderPlan();
 }
 
-function planRemove(key,tag,mahlzeit){
-  if(wochenplan[key]?.[tag]){delete wochenplan[key][tag][mahlzeit];localStorage.setItem('kb_wochenplan',JSON.stringify(wochenplan));renderPlan();}
+async function planRemove(key,tag,mahlzeit,person){
+  if(wochenplan[key]?.[tag]?.[mahlzeit]){
+    delete wochenplan[key][tag][mahlzeit][person];
+    await saveWochenplan(key);renderPlan();
+  }
 }
 
-function planKochen(key,tag,mahlzeit){
-  const rez=wochenplan[key]?.[tag]?.[mahlzeit];if(!rez)return;
+function planKochen(key,tag,mahlzeit,person){
+  const rez=wochenplan[key]?.[tag]?.[mahlzeit]?.[person];if(!rez)return;
   nav('rezepte',document.querySelectorAll('.nav-btn')[1]);
   setTimeout(()=>showRez(rez.id),100);
 }

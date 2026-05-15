@@ -66,7 +66,7 @@
   .rezept-name{font-weight:600;font-size:15px;color:var(--text);margin-bottom:4px}
   .rezept-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
   .tag{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--text3)}
-  .tag-fisch{border-color:#4a7a9a;color:#7aaaca}.tag-fleisch,.tag-rind,.tag-schwein,.tag-haehnchen{border-color:#8a5a4a;color:#ca8a7a}.tag-vegetarisch,.tag-vegan{border-color:#5a7a5a;color:#8aaa8a}.tag-fruehstueck{border-color:#8a6a3a;color:#c9a06a}.tag-friedi{border-color:#7a6a4a;color:#aaa06a}.tag-finn{border-color:#4a6a9a;color:#7aaaca}.tag-kh{border-color:#5a5a8a;color:#9a9aca}.tag-salat{border-color:#4a7a5a;color:#7aaa8a}
+  .tag-fisch{border-color:#4a7a9a;color:#7aaaca}.tag-fleisch,.tag-rind,.tag-schwein,.tag-haehnchen{border-color:#8a5a4a;color:#ca8a7a}.tag-vegetarisch,.tag-vegan{border-color:#5a7a5a;color:#8aaa8a}.tag-fruehstueck{border-color:#8a6a3a;color:#c9a06a}.tag-dessert{border-color:#8a5a8a;color:#c98ac9}.tag-kuchen{border-color:#7a6a3a;color:#c9aa6a}.tag-salat-rez{border-color:#4a7a5a;color:#7aaa8a}.tag-dressing{border-color:#6a7a4a;color:#aac96a}.tag-dips{border-color:#7a5a3a;color:#c98a6a}.tag-friedi{border-color:#7a6a4a;color:#aaa06a}.tag-finn{border-color:#4a6a9a;color:#7aaaca}.tag-kh{border-color:#5a5a8a;color:#9a9aca}.tag-salat{border-color:#4a7a5a;color:#7aaa8a}
   .filter-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:16px}
   .filter-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 6px}.filter-label:first-child{margin-top:0}
   .filter-chips{display:flex;flex-wrap:wrap;gap:6px}
@@ -130,6 +130,27 @@
   .mhd-danger{background:#2a1a0a;color:#e0803a}
   .mhd-expired{background:#351515;color:#c47a7a;text-decoration:line-through}
   .mhd-warn-bar{background:#252310;border:1px solid #5a4a20;border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;color:#c8a050;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+  .plan-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .plan-nav-btn{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 16px;color:var(--text);font-size:18px;cursor:pointer;font-family:'DM Sans',sans-serif;line-height:1}
+  .plan-week-label{font-size:14px;color:var(--text2);font-weight:500}
+  .plan-day{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden}
+  .plan-day-today{border-color:var(--accent)}
+  .plan-day-header{padding:11px 16px;font-weight:600;font-size:14px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .plan-day-date{color:var(--text3);font-size:12px;font-weight:400}
+  .plan-day-today .plan-day-header{background:rgba(200,169,110,.12);color:var(--accent)}
+  .plan-slot{padding:9px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;min-height:42px}
+  .plan-slot:last-child{border-bottom:none}
+  .plan-slot-empty{cursor:pointer;transition:background .15s}
+  .plan-slot-empty:hover{background:var(--surface2)}
+  .plan-mahlzeit-label{font-size:11px;color:var(--text3);width:85px;flex-shrink:0;white-space:nowrap}
+  .plan-rez-row{flex:1;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;min-width:0}
+  .plan-rez-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .plan-add-label{font-size:12px;color:var(--text3);font-style:italic}
+  .plan-btn-cook{background:var(--accent);color:#0f0e0b;border:none;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;flex-shrink:0}
+  .plan-btn-remove{background:none;border:1px solid var(--border);border-radius:50%;width:24px;height:24px;color:var(--text3);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;font-family:'DM Sans',sans-serif}
+  .plan-picker-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);cursor:pointer;border-radius:var(--radius-sm);transition:background .15s}
+  .plan-picker-item:last-child{border-bottom:none}
+  .plan-picker-item:hover{background:var(--surface2);margin:0 -4px;padding:11px 4px}
 </style>
 </head>
 <body>
@@ -208,6 +229,12 @@
         <span class="chip" data-group="protein" data-val="haehnchen" onclick="rChip(this)">🍗 Hähnchen</span>
         <span class="chip" data-group="protein" data-val="vegetarisch" onclick="rChip(this)">🌿 Veggie</span>
             <span class="chip" data-group="protein" data-val="fruehstueck" onclick="rChip(this)">🥐 Frühstück</span>
+            <span class="chip" data-group="protein" data-val="dessert" onclick="rChip(this)">🍮 Dessert</span>
+            <span class="chip" data-group="protein" data-val="kuchen" onclick="rChip(this)">🎂 Kuchen</span>
+            <span class="chip" data-group="protein" data-val="backen" onclick="rChip(this)">🍞 Backen</span>
+            <span class="chip" data-group="protein" data-val="salat_rez" onclick="rChip(this)">🥗 Salat</span>
+            <span class="chip" data-group="protein" data-val="dressing" onclick="rChip(this)">🫙 Dressing</span>
+            <span class="chip" data-group="protein" data-val="dips" onclick="rChip(this)">🥣 Dips</span>
       </div>
       <div class="filter-label">Familie</div>
       <div class="filter-chips">
@@ -268,6 +295,10 @@
             <span class="chip" data-group="protein" data-val="haehnchen" onclick="kiChip(this)">🍗 Hähnchen</span>
             <span class="chip" data-group="protein" data-val="vegetarisch" onclick="kiChip(this)">🌿 Veggie</span>
             <span class="chip" data-group="protein" data-val="fruehstueck" onclick="kiChip(this)">🥐 Frühstück</span>
+            <span class="chip" data-group="protein" data-val="dessert" onclick="kiChip(this)">🍮 Dessert</span>
+            <span class="chip" data-group="protein" data-val="salat_rez" onclick="kiChip(this)">🥗 Salat</span>
+            <span class="chip" data-group="protein" data-val="dressing" onclick="kiChip(this)">🫙 Dressing</span>
+            <span class="chip" data-group="protein" data-val="dips" onclick="kiChip(this)">🥣 Dips</span>
           </div>
         </div>
         <div class="filter-group">
@@ -304,6 +335,16 @@
     </div>
   </div>
 
+  <div class="page content" id="page-plan">
+    <div class="section-title">Wochenplan</div>
+    <div class="plan-nav">
+      <button class="plan-nav-btn" onclick="planPrevWeek()">‹</button>
+      <span class="plan-week-label" id="plan-week-label">KW …</span>
+      <button class="plan-nav-btn" onclick="planNextWeek()">›</button>
+    </div>
+    <div id="plan-list"></div>
+  </div>
+
   <div class="page content" id="page-einkauf">
     <div class="section-title">Einkaufsliste</div>
     <div class="section-sub">Automatisch wenn Bestand zu niedrig</div>
@@ -328,7 +369,20 @@
     <button class="nav-btn" onclick="nav('einkauf',this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4zM3 6h18M16 10a4 4 0 01-8 0"/></svg>Einkauf
     </button>
+    <button class="nav-btn" onclick="nav('plan',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01"/></svg>Plan
+    </button>
   </nav>
+</div>
+
+<div class="modal-overlay" id="plan-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('plan-modal')">✕</button>
+    <div class="modal-title">Rezept für diesen Slot</div>
+    <div style="clear:both;margin-top:12px"></div>
+    <input class="form-input" id="plan-search" placeholder="Rezept suchen…" oninput="renderPlanPicker()" style="width:100%;margin-bottom:12px"/>
+    <div id="plan-picker-list"></div>
+  </div>
 </div>
 
 <div class="modal-overlay" id="rez-modal"><div class="modal" id="rez-modal-c"></div></div>
@@ -401,6 +455,12 @@
         <option value="vegetarisch">🌿 Vegetarisch</option>
         <option value="vegan">🌱 Vegan</option>
         <option value="fruehstueck">🥐 Frühstück/Lunch</option>
+        <option value="dessert">🍮 Dessert</option>
+        <option value="kuchen">🎂 Kuchen</option>
+        <option value="backen">🍞 Brot backen</option>
+        <option value="salat_rez">🥗 Salat</option>
+        <option value="dressing">🫙 Dressing</option>
+        <option value="dips">🥣 Dips &amp; Aufstriche</option>
       </select>
       <input class="form-input" id="m-zeit" placeholder="Zeit (z.B. 30 Min)"/>
       <input class="form-input" id="m-port" type="number" value="4" style="max-width:100px"/>
@@ -541,7 +601,7 @@ function moveToWoche(i){einkauf[i].liste='woechentlich';localStorage.setItem('kb
 function toggleEinkauf(i){einkauf[i].done=!einkauf[i].done;localStorage.setItem('kb_einkauf',JSON.stringify(einkauf));renderEinkauf();}
 function clearDone(){einkauf=einkauf.filter(e=>!e.done);localStorage.setItem('kb_einkauf',JSON.stringify(einkauf));renderEinkauf();}
 
-function renderAll(){renderB();renderR();renderKiZut();renderEinkauf();}
+function renderAll(){renderB();renderR();renderKiZut();renderEinkauf();renderPlan();}
 
 function bTab(f,btn){document.querySelectorAll('#page-bestand .tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');bFilter=f;renderB();}
 
@@ -559,12 +619,16 @@ function resetRFilter(){
 }
 
 function katLabel(k){
-  return{fisch:'🐟 Fisch',rind:'🥩 Rind',schwein:'🐷 Schwein',haehnchen:'🍗 Hähnchen',vegetarisch:'🌿 Veggie',vegan:'🌱 Vegan',fleisch:'🥩 Fleisch',fruehstueck:'🥐 Frühstück/Lunch'}[k]||k;
+  return{fisch:'🐟 Fisch',rind:'🥩 Rind',schwein:'🐷 Schwein',haehnchen:'🍗 Hähnchen',vegetarisch:'🌿 Veggie',vegan:'🌱 Vegan',fleisch:'🥩 Fleisch',fruehstueck:'🥐 Frühstück/Lunch',dessert:'🍮 Dessert',kuchen:'🎂 Kuchen',backen:'🍞 Brot backen',salat_rez:'🥗 Salat',dressing:'🫙 Dressing',dips:'🥣 Dips'}[k]||k;
 }
 function katCls(k){
   if(k==='fisch')return'tag-fisch';
   if(['vegetarisch','vegan'].includes(k))return'tag-vegetarisch';
   if(k==='fruehstueck')return'tag-fruehstueck';
+  if(['dessert','kuchen','backen'].includes(k))return'tag-dessert';
+  if(k==='salat_rez')return'tag-salat-rez';
+  if(k==='dressing')return'tag-dressing';
+  if(k==='dips')return'tag-dips';
   return'tag-fleisch';
 }
 
@@ -628,7 +692,11 @@ function renderR(){
   let f=rezepte;
   if(rFilters.protein.size>0)f=f.filter(r=>{
     const k=r.kategorie||'';
-    return[...rFilters.protein].some(v=>v==='vegetarisch'?['vegetarisch','vegan'].includes(k):v==='fruehstueck'?k==='fruehstueck':k===v||(v!=='fisch'&&v!=='fruehstueck'&&k==='fleisch'));
+    const nichtFleisch=['fisch','fruehstueck','vegetarisch','vegan','dessert','kuchen','backen','salat_rez','dressing','dips'];
+    return[...rFilters.protein].some(v=>
+      v==='vegetarisch'?['vegetarisch','vegan'].includes(k):
+      v===k||(v!=='fisch'&&!nichtFleisch.includes(v)&&!nichtFleisch.includes(k)&&k!=='')
+    );
   });
   if(rFilters.familie.size>0)f=f.filter(r=>
     (rFilters.familie.has('friedi')&&r.friedi)||(rFilters.familie.has('finn')&&r.finn)
@@ -827,27 +895,57 @@ async function kiVorschlag(){
   const sel=g=>[...document.querySelectorAll(`.ki-box .chip[data-group="${g}"].selected`)].map(c=>c.dataset.val);
   const protein=sel('protein'),familie=sel('familie'),kh=sel('kh'),extras=sel('extras');
   const zut=[...document.querySelectorAll('#ki-zut .chip.selected')].map(c=>c.textContent).join(', ');
-  const rn=rezepte.map(r=>r.name).join(', ');
   const result=document.getElementById('ki-result');
   result.innerHTML='<div class="ki-loading"><div class="spinner"></div> KI denkt nach...</div>';
-  const proteinMap={fisch:'Fisch',rind:'Rind',schwein:'Schwein',haehnchen:'Hähnchen',vegetarisch:'Vegetarisch/Vegan'};
+
+  // Rezepte nach Kategorie gruppieren für die KI
+  const hauptMap={'fisch':'Fisch','rind':'Rind','schwein':'Schwein','haehnchen':'Hähnchen','vegetarisch':'Vegetarisch','vegan':'Vegan','fleisch':'Fleisch'};
+  const haupt=rezepte.filter(r=>hauptMap[r.kategorie]);
+  const salate=rezepte.filter(r=>r.kategorie==='salat_rez');
+  const dressings=rezepte.filter(r=>r.kategorie==='dressing');
+  const dips=rezepte.filter(r=>r.kategorie==='dips');
+  const desserts=rezepte.filter(r=>['dessert','kuchen'].includes(r.kategorie));
+  const fruehstueck=rezepte.filter(r=>r.kategorie==='fruehstueck');
+
+  const rList=t=>t.map(r=>`${r.emoji||''}${r.name}${r.kohlenhydrate&&r.kohlenhydrate!=='keins'?' ('+r.kohlenhydrate+')':''}`).join(', ');
+
+  const proteinMap={fisch:'Fisch',rind:'Rind',schwein:'Schwein',haehnchen:'Hähnchen',vegetarisch:'Vegetarisch/Vegan',fruehstueck:'Frühstück/Lunch',dessert:'Dessert',salat_rez:'Salat',dressing:'Dressing',dips:'Dips'};
   const khMap={reis:'Reis',nudeln:'Nudeln',kartoffeln:'Kartoffeln',pommes:'Pommes',schupfnudeln:'Schupfnudeln',gnocchi:'Gnocchi',brot:'Brot'};
-  let prompt='Du bist Kochassistent. Herzhafte Küche, viel Umami, keine starke Schärfe, immer frische Komponente dabei. Personen: Christian, Yvonne';
+
+  let prompt='Du bist Kochassistent. Schlage Mahlzeiten NUR aus den folgenden vorhandenen Rezepten vor — erfinde keine neuen Rezepte.\n\n';
+  prompt+=`VERFÜGBARE REZEPTE:\n`;
+  if(haupt.length)prompt+=`Hauptgerichte: ${rList(haupt)}\n`;
+  if(salate.length)prompt+=`Salate: ${rList(salate)}\n`;
+  if(dressings.length)prompt+=`Dressings: ${rList(dressings)}\n`;
+  if(dips.length)prompt+=`Dips/Aufstriche: ${rList(dips)}\n`;
+  if(desserts.length)prompt+=`Desserts/Kuchen: ${rList(desserts)}\n`;
+  if(fruehstueck.length)prompt+=`Frühstück/Lunch: ${rList(fruehstueck)}\n`;
+  prompt+='\n';
+
+  prompt+='ANWEISUNG:\n';
+  prompt+='- Kombiniere Rezepte zu kompletten Mahlzeiten (z.B. Hauptgericht + passender Salat + Dressing)\n';
+  prompt+='- Falls ein Hauptgericht keine Beilage hat, ergänze eine passende Beilage (Beilagenvorschlag als Text, kein separates Rezept nötig)\n';
+  prompt+='- Dessert nur wenn sinnvoll und vorhanden, nicht zwingend\n';
+  prompt+='- Schlage 2-3 vollständige Mahlzeiten vor\n\n';
+
+  prompt+='PERSONEN: Christian, Yvonne';
   if(familie.includes('friedi'))prompt+=', Friedi (Kind, wählerisch)';
   if(familie.includes('finn'))prompt+=', Finn (Kind)';
   prompt+='.\n';
-  if(protein.length)prompt+=`Gewünschtes Protein: ${protein.map(p=>proteinMap[p]||p).join(', ')}\n`;
-  if(kh.length)prompt+=`Gewünschte Beilage/KH: ${kh.map(k=>khMap[k]||k).join(', ')}\n`;
-  if(extras.includes('salat'))prompt+='Mit Salat als Beilage\n';
+
+  if(protein.length)prompt+=`Gewünschter Typ: ${protein.map(p=>proteinMap[p]||p).join(', ')}\n`;
+  if(kh.length)prompt+=`Gewünschte Beilage: ${kh.map(k=>khMap[k]||k).join(', ')}\n`;
+  if(extras.includes('salat'))prompt+='Mit Salat gewünscht\n';
   if(extras.includes('schnell'))prompt+='Kochzeit unter 30 Minuten\n';
-  if(zut)prompt+=`Verfügbare Zutaten im Bestand: ${zut}\n`;
-  if(rn)prompt+=`Bekannte Rezepte (gerne neu oder Variante): ${rn}\n`;
-  prompt+='Schlage 2-3 konkrete Gerichte vor. Pro Gericht: Name+Emoji, warum es passt, Hauptzutaten, Kochzeit';
+  if(zut)prompt+=`Besonders verfügbar im Bestand: ${zut}\n`;
+
+  prompt+='\nFormat pro Vorschlag: Emoji+Name der Mahlzeit, welche Rezepte kombiniert werden, kurze Begründung, Gesamtkochzeit';
   if(familie.includes('friedi'))prompt+=', ob Friedi es isst';
   if(familie.includes('finn'))prompt+=', ob Finn es isst';
   prompt+='. Auf Deutsch, locker.';
+
   try{
-    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:prompt}]})});
+    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,messages:[{role:'user',content:prompt}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
     result.innerHTML=`<div class="ki-result" style="white-space:pre-wrap;line-height:1.6;font-size:14px">${text}</div>`;
@@ -864,8 +962,84 @@ function renderEinkauf(){
   list.innerHTML=sichtbar.map(e=>`<div class="einkauf-item"><input type="checkbox" class="einkauf-check" ${e.done?'checked':''} onchange="toggleEinkauf(${e.i})"/><span class="einkauf-name ${e.done?'einkauf-done':''}">${e.name} <span style="color:var(--text3);font-size:12px">${e.einheit||''}</span></span>${e.liste==='metro'?`<button onclick="moveToWoche(${e.i})" style="margin-left:auto;font-size:11px;padding:3px 8px;border-radius:20px;border:1px solid var(--accent);color:var(--accent);background:none;cursor:pointer;white-space:nowrap">→ Woche</button>`:''}</div>`).join('');
 }
 
+// ── Wochenplan ─────────────────────────────────────────────────────
+let wochenplan=JSON.parse(localStorage.getItem('kb_wochenplan')||'{}');
+let planWeekOffset=0;
+let _planSlot=null;
+const WOCHENTAGE=['montag','dienstag','mittwoch','donnerstag','freitag','samstag','sonntag'];
+const WOCHENTAGE_L=['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
+const MAHLZEITEN=['fruehstueck','mittag','abendessen','snack','dessert'];
+const MAHLZEITEN_L={fruehstueck:'☀️ Frühstück',mittag:'🕛 Mittag',abendessen:'🌙 Abendessen',snack:'🍎 Snack',dessert:'🍮 Dessert'};
+
+function isoWeek(d){const t=new Date(d);t.setHours(0,0,0,0);t.setDate(t.getDate()+3-(t.getDay()+6)%7);const w1=new Date(t.getFullYear(),0,4);return 1+Math.round(((t-w1)/86400000-3+(w1.getDay()+6)%7)/7);}
+function weekMonday(offset){const d=new Date();d.setDate(d.getDate()+offset*7);const day=d.getDay();d.setDate(d.getDate()-(day===0?6:day-1));d.setHours(0,0,0,0);return d;}
+function weekDates(offset){const m=weekMonday(offset);return Array.from({length:7},(_,i)=>{const d=new Date(m);d.setDate(m.getDate()+i);return d;});}
+function weekKey(offset){const m=weekMonday(offset);return `${m.getFullYear()}-W${String(isoWeek(m)).padStart(2,'0')}`;}
+
+function planPrevWeek(){planWeekOffset--;renderPlan();}
+function planNextWeek(){planWeekOffset++;renderPlan();}
+
+function renderPlan(){
+  const key=weekKey(planWeekOffset);
+  const dates=weekDates(planWeekOffset);
+  const week=wochenplan[key]||{};
+  const kw=isoWeek(dates[0]);
+  const from=dates[0].toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
+  const to=dates[6].toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'});
+  document.getElementById('plan-week-label').textContent=`KW ${kw} · ${from} – ${to}`;
+  const today=new Date();today.setHours(0,0,0,0);
+  document.getElementById('plan-list').innerHTML=WOCHENTAGE.map((tag,i)=>{
+    const date=dates[i];const isToday=date.getTime()===today.getTime();
+    const dayPlan=week[tag]||{};
+    const slots=MAHLZEITEN.map(m=>{
+      const rez=dayPlan[m];
+      if(rez){return `<div class="plan-slot plan-slot-filled"><span class="plan-mahlzeit-label">${MAHLZEITEN_L[m]}</span><div class="plan-rez-row"><span class="plan-rez-name">${rez.emoji||'🍳'} ${rez.name}</span><div style="display:flex;gap:6px;flex-shrink:0">${isToday?`<button class="plan-btn-cook" onclick="planKochen('${key}','${tag}','${m}')">▶ Kochen</button>`:''}<button class="plan-btn-remove" onclick="planRemove('${key}','${tag}','${m}')">✕</button></div></div></div>`;}
+      else{return `<div class="plan-slot plan-slot-empty" onclick="planChoose('${key}','${tag}','${m}')"><span class="plan-mahlzeit-label">${MAHLZEITEN_L[m]}</span><span class="plan-add-label">+ Rezept wählen</span></div>`;}
+    }).join('');
+    return `<div class="plan-day${isToday?' plan-day-today':''}"><div class="plan-day-header"><span>${WOCHENTAGE_L[i]}</span><span class="plan-day-date">${date.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit'})}</span></div>${slots}</div>`;
+  }).join('');
+}
+
+function planChoose(key,tag,mahlzeit){
+  _planSlot={key,tag,mahlzeit};
+  if(document.getElementById('plan-search'))document.getElementById('plan-search').value='';
+  renderPlanPicker();
+  document.getElementById('plan-modal').classList.add('open');
+}
+
+function renderPlanPicker(){
+  const q=(document.getElementById('plan-search')?.value||'').toLowerCase();
+  const filtered=rezepte.filter(r=>!q||r.name.toLowerCase().includes(q)||(r.kategorie||'').includes(q));
+  document.getElementById('plan-picker-list').innerHTML=filtered.length
+    ?filtered.map(r=>`<div class="plan-picker-item" onclick="planSet(${r.id})"><span style="font-size:22px;flex-shrink:0">${r.emoji||'🍳'}</span><div><div style="font-weight:500;font-size:14px">${r.name}</div><div style="font-size:12px;color:var(--text3)">${katLabel(r.kategorie)} · ⏱ ${r.zeit||'?'}</div></div></div>`).join('')
+    :'<div style="color:var(--text3);padding:16px;text-align:center;font-size:14px">Keine Rezepte gefunden</div>';
+}
+
+function planSet(id){
+  if(!_planSlot)return;
+  const r=rezepte.find(x=>x.id===id);if(!r)return;
+  const{key,tag,mahlzeit}=_planSlot;
+  if(!wochenplan[key])wochenplan[key]={};
+  if(!wochenplan[key][tag])wochenplan[key][tag]={};
+  wochenplan[key][tag][mahlzeit]={id:r.id,name:r.name,emoji:r.emoji||'🍳'};
+  localStorage.setItem('kb_wochenplan',JSON.stringify(wochenplan));
+  closeModal('plan-modal');renderPlan();
+}
+
+function planRemove(key,tag,mahlzeit){
+  if(wochenplan[key]?.[tag]){delete wochenplan[key][tag][mahlzeit];localStorage.setItem('kb_wochenplan',JSON.stringify(wochenplan));renderPlan();}
+}
+
+function planKochen(key,tag,mahlzeit){
+  const rez=wochenplan[key]?.[tag]?.[mahlzeit];if(!rez)return;
+  nav('rezepte',document.querySelectorAll('.nav-btn')[1]);
+  setTimeout(()=>showRez(rez.id),100);
+}
+// ── Ende Wochenplan ─────────────────────────────────────────────────
+
 function nav(p,btn){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));document.getElementById('page-'+p).classList.add('active');btn.classList.add('active');}
 
+document.getElementById('plan-modal').addEventListener('click',e=>{if(e.target===document.getElementById('plan-modal'))closeModal('plan-modal');});
 document.getElementById('rez-modal').addEventListener('click',e=>{if(e.target===document.getElementById('rez-modal'))closeModal('rez-modal');});
 document.getElementById('man-modal').addEventListener('click',e=>{if(e.target===document.getElementById('man-modal'))closeModal('man-modal');});
 document.getElementById('settings-modal').addEventListener('click',e=>{if(e.target===document.getElementById('settings-modal'))closeModal('settings-modal');});

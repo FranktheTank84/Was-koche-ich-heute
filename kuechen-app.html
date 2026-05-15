@@ -1017,11 +1017,13 @@ async function kiWochenplan(){
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
     const json=text.replace(/```json|```/g,'').trim();
-    const plan=JSON.parse(json);
-    const offset=woche==='naechste'?1:0;
-    result.innerHTML=renderWkPreview(plan,personen,mahlzeiten)+`<button class="btn-primary" style="width:100%;margin-top:16px" onclick="kiPlanUebernehmen(${JSON.stringify(JSON.stringify(plan))},${offset})">✓ In Wochenplan übernehmen</button><button class="btn-secondary" style="width:100%;margin-top:8px" onclick="kiWochenplan()">↺ Neuer Vorschlag</button>`;
+    _kiPlan=plan; _kiPlanOffset=offset;
+    result.innerHTML=renderWkPreview(plan,personen,mahlzeiten)
+      +`<div style="display:flex;gap:8px;margin-top:16px"><button class="btn-primary" style="flex:1" onclick="kiPlanUebernehmen()">✓ Alles übernehmen</button><button class="btn-secondary" style="flex:1" onclick="kiWochenplan()">↺ Neu</button></div>`;
   }catch(e){result.innerHTML='<div style="color:#c47a7a;font-size:13px;padding:12px">Fehler beim Erstellen. Bitte nochmal versuchen.</div>';}
 }
+
+let _kiPlan=null, _kiPlanOffset=0;
 
 function renderWkPreview(plan,personen,mahlzeiten){
   const TAGE=['montag','dienstag','mittwoch','donnerstag','freitag','samstag','sonntag'];
@@ -1034,38 +1036,69 @@ function renderWkPreview(plan,personen,mahlzeiten){
       const slot=day[m];if(!slot)return'';
       const personRows=personen.map(p=>{
         const arr=slot[p];if(!arr||!arr.length)return'';
-        return`<div class="wk-meal-row"><span class="wk-meal-label">${ML[m]||m}</span><span class="wk-meal-person">${PL[p]||p}</span><span class="wk-meal-name">${arr.join(' + ')}</span></div>`;
+        return`<div class="wk-meal-row"><span class="wk-meal-label">${ML[m]||m}</span><span class="wk-meal-person">${PL[p]||p}</span><span class="wk-meal-name">${arr.join(' + ')}</span><button class="plan-add-chip" style="font-size:11px;padding:2px 8px;margin-left:6px;flex-shrink:0" onclick="kiPlanEinzeln('${tag}','${m}','${p}')">+ übernehmen</button></div>`;
       }).join('');
       return personRows;
     }).join('');
     if(!rows.trim())return'';
-    return`<div class="wk-day-block"><div class="wk-day-name">${TAGE_L[i]}</div>${rows}</div>`;
+    return`<div class="wk-day-block"><div class="wk-day-name" style="display:flex;justify-content:space-between;align-items:center">${TAGE_L[i]}<button class="plan-add-chip" style="font-size:11px;padding:2px 10px" onclick="kiPlanTagUebernehmen('${tag}')">+ Tag übernehmen</button></div>${rows}</div>`;
   }).join('')+'</div>';
 }
 
-async function kiPlanUebernehmen(planJson,offset){
-  const plan=JSON.parse(planJson);
-  const key=weekKey(offset);
+function kiNamenZuChips(namen){
+  const arr=Array.isArray(namen)?namen:[namen];
+  return arr.map(name=>{
+    const found=rezepte.find(r=>r.name.toLowerCase()===name.toLowerCase())||rezepte.find(r=>name.toLowerCase().includes(r.name.toLowerCase().split(' ')[0]));
+    return found?{id:found.id,name:found.name,emoji:found.emoji||'🍳'}:{name,emoji:'🍳'};
+  });
+}
+
+async function kiPlanSlotSpeichern(key,tag,mahlzeit,personData){
   if(!wochenplan[key])await loadWochenplan(key);
-  const TAGE=['montag','dienstag','mittwoch','donnerstag','freitag','samstag','sonntag'];
-  for(const tag of TAGE){
-    if(!plan[tag])continue;
-    if(!wochenplan[key][tag])wochenplan[key][tag]={};
-    for(const[mahlzeit,personData]of Object.entries(plan[tag])){
-      if(!wochenplan[key][tag][mahlzeit])wochenplan[key][tag][mahlzeit]={};
-      for(const[person,namen]of Object.entries(personData)){
-        const arr=Array.isArray(namen)?namen:[namen];
-        wochenplan[key][tag][mahlzeit][person]=arr.map(name=>{
-          const found=rezepte.find(r=>r.name.toLowerCase()===name.toLowerCase())||rezepte.find(r=>name.toLowerCase().includes(r.name.toLowerCase().split(' ')[0]));
-          return found?{id:found.id,name:found.name,emoji:found.emoji||'🍳'}:{name,emoji:'🍳'};
-        });
-      }
-    }
+  if(!wochenplan[key][tag])wochenplan[key][tag]={};
+  if(!wochenplan[key][tag][mahlzeit])wochenplan[key][tag][mahlzeit]={};
+  for(const[person,namen]of Object.entries(personData)){
+    wochenplan[key][tag][mahlzeit][person]=kiNamenZuChips(namen);
   }
   await saveWochenplan(key);
-  planWeekOffset=offset;
-  const planBtn=document.querySelectorAll('.nav-btn')[3];
-  nav('plan',planBtn);
+}
+
+async function kiPlanEinzeln(tag,mahlzeit,person){
+  if(!_kiPlan)return;
+  const namen=_kiPlan[tag]?.[mahlzeit]?.[person];
+  if(!namen)return;
+  const key=weekKey(_kiPlanOffset);
+  if(!wochenplan[key])await loadWochenplan(key);
+  if(!wochenplan[key][tag])wochenplan[key][tag]={};
+  if(!wochenplan[key][tag][mahlzeit])wochenplan[key][tag][mahlzeit]={};
+  wochenplan[key][tag][mahlzeit][person]=kiNamenZuChips(namen);
+  await saveWochenplan(key);
+  // Button kurz als Bestätigung markieren
+  event.target.textContent='✓';event.target.style.color='var(--accent)';
+  setTimeout(()=>{if(event.target){event.target.textContent='+ übernehmen';event.target.style.color='';}},1500);
+}
+
+async function kiPlanTagUebernehmen(tag){
+  if(!_kiPlan||!_kiPlan[tag])return;
+  const key=weekKey(_kiPlanOffset);
+  for(const[mahlzeit,personData]of Object.entries(_kiPlan[tag])){
+    await kiPlanSlotSpeichern(key,tag,mahlzeit,personData);
+  }
+  event.target.textContent='✓ Übernommen';event.target.style.color='var(--accent)';
+}
+
+async function kiPlanUebernehmen(){
+  if(!_kiPlan)return;
+  const key=weekKey(_kiPlanOffset);
+  const TAGE=['montag','dienstag','mittwoch','donnerstag','freitag','samstag','sonntag'];
+  for(const tag of TAGE){
+    if(!_kiPlan[tag])continue;
+    for(const[mahlzeit,personData]of Object.entries(_kiPlan[tag])){
+      await kiPlanSlotSpeichern(key,tag,mahlzeit,personData);
+    }
+  }
+  planWeekOffset=_kiPlanOffset;
+  nav('plan',document.querySelectorAll('.nav-btn')[3]);
   planLoadAndRender();
 }
 // ── Ende KI Wochenplan ──────────────────────────────────────────────

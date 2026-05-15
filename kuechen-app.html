@@ -910,18 +910,21 @@ function restoreUploadArea(){
 
 async function rezFromFoto(event){
   const file=event.target.files[0];if(!file)return;
-  resetFotoInputs(); // sofort zurücksetzen — nächster Versuch klappt immer
+  // Erst NACH der Bildverarbeitung zurücksetzen — iOS macht den File-Zeiger
+  // ungültig wenn man den Input vorher leert
   const area=document.getElementById('upload-area');
   area.innerHTML='<div class="ki-loading"><div class="spinner"></div> KI liest Rezept aus Foto...</div>';
   let rez=null;
   try{
     const b64=await resizeImage(file);
+    resetFotoInputs(); // jetzt erst zurücksetzen — Datei ist bereits im Speicher
     const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:'Lies das Rezept aus diesem Foto. Antworte NUR mit JSON:\n{"name":"...","emoji":"...","kategorie":"fisch|rind|schwein|haehnchen|vegetarisch|vegan|fruehstueck","zeit":"30 Min","portionen":4,"friedi":false,"finn":false,"kohlenhydrate":"nudeln|reis|kartoffeln|pommes|schupfnudeln|gnocchi|brot|keins","mit_salat":false,"zutaten":[{"name":"...","menge":500,"einheit":"g"}],"schritte":["Schritt 1"]}'}]}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
     rez=JSON.parse(text.replace(/```json|```/g,'').trim());
     rez.quelle='Foto';
   }catch(e){
+    resetFotoInputs();
     restoreUploadArea();
     const msg=e?.message||String(e)||'Unbekannter Fehler';
     const istMemory=msg.toLowerCase().includes('memory')||msg.toLowerCase().includes('speicher')||msg.toLowerCase().includes('blob');

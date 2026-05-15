@@ -867,27 +867,50 @@ async function rezFromUrl(){
   btn.textContent='📎 Laden';btn.disabled=false;
 }
 
-function resizeImage(file,maxPx=1600,quality=0.82){
+function resizeImage(file,maxPx=1100,quality=0.78){
   return new Promise((res,rej)=>{
     const img=new Image();
     const url=URL.createObjectURL(file);
+    const cleanup=()=>{try{URL.revokeObjectURL(url);}catch(e){}};
     img.onload=()=>{
-      URL.revokeObjectURL(url);
+      cleanup();
       let{width:w,height:h}=img;
       if(w>maxPx||h>maxPx){const s=maxPx/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s);}
-      const c=document.createElement('canvas');c.width=w;c.height=h;
-      c.getContext('2d').drawImage(img,0,0,w,h);
+      let c;
+      try{
+        c=document.createElement('canvas');c.width=w;c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        img.src=''; // Bild-Speicher freigeben
+      }catch(err){if(c){c.width=0;c.height=0;}return rej(err);}
       c.toBlob(b=>{
-        if(!b)return rej(new Error('Canvas toBlob fehlgeschlagen'));
-        const fr=new FileReader();fr.onload=()=>res(fr.result.split(',')[1]);fr.onerror=rej;fr.readAsDataURL(b);
+        c.width=0;c.height=0; // Canvas-Speicher sofort freigeben
+        if(!b)return rej(new Error('Bild konnte nicht verarbeitet werden'));
+        const fr=new FileReader();
+        fr.onload=()=>res(fr.result.split(',')[1]);
+        fr.onerror=rej;
+        fr.readAsDataURL(b);
       },'image/jpeg',quality);
     };
-    img.onerror=rej;img.src=url;
+    img.onerror=(e)=>{cleanup();rej(e);};
+    img.src=url;
   });
+}
+
+function resetFotoInputs(){
+  // Input-Wert zurücksetzen damit dasselbe Foto nochmal gewählt werden kann
+  const fi=document.getElementById('foto-in');if(fi)fi.value='';
+  const ki=document.getElementById('kamera-in');if(ki)ki.value='';
+}
+
+function restoreUploadArea(){
+  const area=document.getElementById('upload-area');
+  if(!area)return;
+  area.innerHTML='<input type="file" id="foto-in" accept="image/*" style="display:none" onchange="rezFromFoto(event)"/><div class="upload-icon" style="font-size:24px;margin-bottom:4px">🖼️</div><div class="upload-text">Galerie</div>';
 }
 
 async function rezFromFoto(event){
   const file=event.target.files[0];if(!file)return;
+  resetFotoInputs(); // sofort zurücksetzen — nächster Versuch klappt immer
   const area=document.getElementById('upload-area');
   area.innerHTML='<div class="ki-loading"><div class="spinner"></div> KI liest Rezept aus Foto...</div>';
   let rez=null;
@@ -898,8 +921,17 @@ async function rezFromFoto(event){
     const text=data.content?.map(c=>c.text||'').join('')||'';
     rez=JSON.parse(text.replace(/```json|```/g,'').trim());
     rez.quelle='Foto';
-  }catch(e){alert('Fehler beim Auslesen: '+e.message);}
-  area.innerHTML='<input type="file" id="foto-in" accept="image/*" style="display:none" onchange="rezFromFoto(event)"/><div class="upload-icon">📸</div><div class="upload-text">Buchseite fotografieren & KI liest Rezept aus</div>';
+  }catch(e){
+    restoreUploadArea();
+    const istMemory=e.message&&(e.message.toLowerCase().includes('memory')||e.message.toLowerCase().includes('speicher')||e.message.toLowerCase().includes('blob'));
+    if(istMemory){
+      if(confirm('Zu wenig Arbeitsspeicher.\n\nApp jetzt neu laden und nochmal versuchen?')){location.reload();}
+    }else{
+      alert('Fehler beim Auslesen: '+e.message);
+    }
+    return;
+  }
+  restoreUploadArea();
   if(rez)openConfirmRez(rez);
 }
 

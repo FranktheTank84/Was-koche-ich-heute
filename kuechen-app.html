@@ -66,7 +66,7 @@
   .rezept-name{font-weight:600;font-size:15px;color:var(--text);margin-bottom:4px}
   .rezept-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
   .tag{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;color:var(--text3)}
-  .tag-fisch{border-color:#4a7a9a;color:#7aaaca}.tag-fleisch,.tag-rind,.tag-schwein,.tag-haehnchen{border-color:#8a5a4a;color:#ca8a7a}.tag-vegetarisch,.tag-vegan{border-color:#5a7a5a;color:#8aaa8a}.tag-fruehstueck{border-color:#8a6a3a;color:#c9a06a}.tag-dessert{border-color:#8a5a8a;color:#c98ac9}.tag-kuchen{border-color:#7a6a3a;color:#c9aa6a}.tag-salat-rez{border-color:#4a7a5a;color:#7aaa8a}.tag-dressing{border-color:#6a7a4a;color:#aac96a}.tag-dips{border-color:#7a5a3a;color:#c98a6a}.tag-friedi{border-color:#7a6a4a;color:#aaa06a}.tag-finn{border-color:#4a6a9a;color:#7aaaca}.tag-kh{border-color:#5a5a8a;color:#9a9aca}.tag-salat{border-color:#4a7a5a;color:#7aaa8a}
+  .tag-fisch{border-color:#4a7a9a;color:#7aaaca}.tag-fleisch,.tag-rind,.tag-schwein,.tag-haehnchen{border-color:#8a5a4a;color:#ca8a7a}.tag-vegetarisch,.tag-vegan{border-color:#5a7a5a;color:#8aaa8a}.tag-fruehstueck{border-color:#8a6a3a;color:#c9a06a}.tag-dessert{border-color:#8a5a8a;color:#c98ac9}.tag-kuchen{border-color:#7a6a3a;color:#c9aa6a}.tag-salat-rez{border-color:#4a7a5a;color:#7aaa8a}.tag-dressing{border-color:#6a7a4a;color:#aac96a}.tag-dips{border-color:#7a5a3a;color:#c98a6a}.tag-unterwegs{border-color:#3a6a8a;color:#6aaaba}.tag-friedi{border-color:#7a6a4a;color:#aaa06a}.tag-finn{border-color:#4a6a9a;color:#7aaaca}.tag-kh{border-color:#5a5a8a;color:#9a9aca}.tag-salat{border-color:#4a7a5a;color:#7aaa8a}
   .filter-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:16px}
   .filter-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 6px}.filter-label:first-child{margin-top:0}
   .filter-chips{display:flex;flex-wrap:wrap;gap:6px}
@@ -255,6 +255,7 @@
             <span class="chip" data-group="protein" data-val="salat_rez" onclick="rChip(this)">🥗 Salat</span>
             <span class="chip" data-group="protein" data-val="dressing" onclick="rChip(this)">🫙 Dressing</span>
             <span class="chip" data-group="protein" data-val="dips" onclick="rChip(this)">🥣 Dips</span>
+            <span class="chip" data-group="protein" data-val="unterwegs" onclick="rChip(this)">🚗 Unterwegs</span>
       </div>
       <div class="filter-label">Familie</div>
       <div class="filter-chips">
@@ -325,6 +326,7 @@
             <span class="chip" data-group="protein" data-val="salat_rez" onclick="kiChip(this)">🥗 Salat</span>
             <span class="chip" data-group="protein" data-val="dressing" onclick="kiChip(this)">🫙 Dressing</span>
             <span class="chip" data-group="protein" data-val="dips" onclick="kiChip(this)">🥣 Dips</span>
+            <span class="chip" data-group="protein" data-val="unterwegs" onclick="kiChip(this)">🚗 Unterwegs</span>
           </div>
         </div>
         <div class="filter-group">
@@ -377,6 +379,7 @@
         <span class="chip selected" data-wk="mahlzeit" data-val="abendessen" onclick="wkChip(this)">🌙 Abendessen</span>
         <span class="chip" data-wk="mahlzeit" data-val="snack" onclick="wkChip(this)">🍎 Snack</span>
         <span class="chip" data-wk="mahlzeit" data-val="dessert" onclick="wkChip(this)">🍮 Dessert</span>
+        <span class="chip" data-wk="mahlzeit" data-val="unterwegs" onclick="wkChip(this)">🚗 Unterwegs</span>
       </div>
       <div class="filter-label">Vorlieben (optional)</div>
       <div class="zutaten-chips" style="margin-bottom:12px;flex-wrap:wrap">
@@ -528,6 +531,7 @@
         <option value="salat_rez">🥗 Salat</option>
         <option value="dressing">🫙 Dressing</option>
         <option value="dips">🥣 Dips &amp; Aufstriche</option>
+        <option value="unterwegs">🚗 Unterwegs</option>
       </select>
       <input class="form-input" id="m-zeit" placeholder="Zeit (z.B. 30 Min)"/>
       <input class="form-input" id="m-port" type="number" value="4" style="max-width:100px"/>
@@ -698,7 +702,7 @@ function resetRFilter(){
 }
 
 function katLabel(k){
-  return{fisch:'🐟 Fisch',rind:'🥩 Rind',schwein:'🐷 Schwein',haehnchen:'🍗 Hähnchen',vegetarisch:'🌿 Veggie',vegan:'🌱 Vegan',fleisch:'🥩 Fleisch',fruehstueck:'🥐 Frühstück/Lunch',dessert:'🍮 Dessert',kuchen:'🎂 Kuchen',backen:'🍞 Brot backen',salat_rez:'🥗 Salat',dressing:'🫙 Dressing',dips:'🥣 Dips'}[k]||k;
+  return{fisch:'🐟 Fisch',rind:'🥩 Rind',schwein:'🐷 Schwein',haehnchen:'🍗 Hähnchen',vegetarisch:'🌿 Veggie',vegan:'🌱 Vegan',fleisch:'🥩 Fleisch',fruehstueck:'🥐 Frühstück/Lunch',dessert:'🍮 Dessert',kuchen:'🎂 Kuchen',backen:'🍞 Brot backen',salat_rez:'🥗 Salat',dressing:'🫙 Dressing',dips:'🥣 Dips',unterwegs:'🚗 Unterwegs'}[k]||k;
 }
 function katCls(k){
   if(k==='fisch')return'tag-fisch';
@@ -708,6 +712,7 @@ function katCls(k){
   if(k==='salat_rez')return'tag-salat-rez';
   if(k==='dressing')return'tag-dressing';
   if(k==='dips')return'tag-dips';
+  if(k==='unterwegs')return'tag-unterwegs';
   return'tag-fleisch';
 }
 
@@ -771,7 +776,7 @@ function renderR(){
   let f=rezepte;
   if(rFilters.protein.size>0)f=f.filter(r=>{
     const k=r.kategorie||'';
-    const nichtFleisch=['fisch','fruehstueck','vegetarisch','vegan','dessert','kuchen','backen','salat_rez','dressing','dips'];
+    const nichtFleisch=['fisch','fruehstueck','vegetarisch','vegan','dessert','kuchen','backen','salat_rez','dressing','dips','unterwegs'];
     return[...rFilters.protein].some(v=>
       v==='vegetarisch'?['vegetarisch','vegan'].includes(k):
       v===k||(v!=='fisch'&&!nichtFleisch.includes(v)&&!nichtFleisch.includes(k)&&k!=='')
@@ -994,9 +999,10 @@ async function kiWochenplan(){
   const dressings=rezepte.filter(r=>r.kategorie==='dressing');
   const desserts=rezepte.filter(r=>['dessert','kuchen'].includes(r.kategorie));
   const fruehstueck=rezepte.filter(r=>r.kategorie==='fruehstueck');
+  const unterwegsRez=rezepte.filter(r=>r.kategorie==='unterwegs');
   const rList=t=>t.map(r=>`${r.name}`).join(', ');
   const PERSONEN_DE={familie:'Alle (Christian & Yvonne)',friedi:'Friedi (Kind, wählerisch)',finn:'Finn (Kind)'};
-  const MAHLZEIT_DE={fruehstueck:'Frühstück',mittag:'Mittagessen',abendessen:'Abendessen',snack:'Snack',dessert:'Dessert'};
+  const MAHLZEIT_DE={fruehstueck:'Frühstück',mittag:'Mittagessen',abendessen:'Abendessen',snack:'Snack',dessert:'Dessert',unterwegs:'Unterwegs'};
 
   let prompt=`Du bist Kochassistent. Erstelle einen Wochenplan (Montag bis Sonntag).\n\n`;
   prompt+=`UNSERE REZEPTE:\n`;
@@ -1005,6 +1011,7 @@ async function kiWochenplan(){
   if(dressings.length)prompt+=`Dressings: ${rList(dressings)}\n`;
   if(desserts.length)prompt+=`Desserts: ${rList(desserts)}\n`;
   if(fruehstueck.length)prompt+=`Frühstück: ${rList(fruehstueck)}\n`;
+  if(unterwegsRez.length)prompt+=`Unterwegs-Mahlzeiten: ${rList(unterwegsRez)}\n`;
   prompt+=`\nPERSONEN: ${personen.map(p=>PERSONEN_DE[p]).join(', ')}\n`;
   prompt+=`MAHLZEITEN: ${mahlzeiten.map(m=>MAHLZEIT_DE[m]).join(', ')}\n`;
   if(prefs.length)prompt+=`VORLIEBEN: ${prefs.join(', ')}\n`;
@@ -1028,7 +1035,7 @@ let _kiPlan=null, _kiPlanOffset=0;
 function renderWkPreview(plan,personen,mahlzeiten){
   const TAGE=['montag','dienstag','mittwoch','donnerstag','freitag','samstag','sonntag'];
   const TAGE_L=['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
-  const ML={fruehstueck:'☀️ Frühstück',mittag:'🕛 Mittag',abendessen:'🌙 Abendessen',snack:'🍎 Snack',dessert:'🍮 Dessert'};
+  const ML={fruehstueck:'☀️ Frühstück',mittag:'🕛 Mittag',abendessen:'🌙 Abendessen',snack:'🍎 Snack',dessert:'🍮 Dessert',unterwegs:'🚗 Unterwegs'};
   const PL={familie:'👨‍👩',friedi:'👧',finn:'👦'};
   return '<div class="wk-preview">'+TAGE.map((tag,i)=>{
     const day=plan[tag];if(!day)return'';
@@ -1124,10 +1131,11 @@ async function kiVorschlag(){
   const dips=rezepte.filter(r=>r.kategorie==='dips');
   const desserts=rezepte.filter(r=>['dessert','kuchen'].includes(r.kategorie));
   const fruehstueck=rezepte.filter(r=>r.kategorie==='fruehstueck');
+  const unterwegsRezH=rezepte.filter(r=>r.kategorie==='unterwegs');
 
   const rList=t=>t.map(r=>`${r.emoji||''}${r.name}${r.kohlenhydrate&&r.kohlenhydrate!=='keins'?' ('+r.kohlenhydrate+')':''}`).join(', ');
 
-  const proteinMap={fisch:'Fisch',rind:'Rind',schwein:'Schwein',haehnchen:'Hähnchen',vegetarisch:'Vegetarisch/Vegan',fruehstueck:'Frühstück/Lunch',dessert:'Dessert',salat_rez:'Salat',dressing:'Dressing',dips:'Dips'};
+  const proteinMap={fisch:'Fisch',rind:'Rind',schwein:'Schwein',haehnchen:'Hähnchen',vegetarisch:'Vegetarisch/Vegan',fruehstueck:'Frühstück/Lunch',dessert:'Dessert',salat_rez:'Salat',dressing:'Dressing',dips:'Dips',unterwegs:'Unterwegs'};
   const khMap={reis:'Reis',nudeln:'Nudeln',kartoffeln:'Kartoffeln',pommes:'Pommes',schupfnudeln:'Schupfnudeln',gnocchi:'Gnocchi',brot:'Brot'};
 
   let prompt='Du bist Kochassistent. Nutze unsere vorhandenen Rezepte als Basis — kombiniere sie zu kompletten Mahlzeiten oder ergänze sie mit eigenen Ideen. Wenn wir für eine Kategorie keine passenden Rezepte haben, schlage gerne eigene neue Gerichte vor.\n\n';
@@ -1138,6 +1146,7 @@ async function kiVorschlag(){
   if(dips.length)prompt+=`Dips/Aufstriche: ${rList(dips)}\n`;
   if(desserts.length)prompt+=`Desserts/Kuchen: ${rList(desserts)}\n`;
   if(fruehstueck.length)prompt+=`Frühstück/Lunch: ${rList(fruehstueck)}\n`;
+  if(unterwegsRezH.length)prompt+=`Unterwegs-Mahlzeiten: ${rList(unterwegsRezH)}\n`;
   prompt+='\n';
 
   prompt+='ANWEISUNG:\n';
@@ -1189,8 +1198,8 @@ let _planSlot=null; // {key,tag,mahlzeit,person}
 let _planPerson='familie';
 const WOCHENTAGE=['montag','dienstag','mittwoch','donnerstag','freitag','samstag','sonntag'];
 const WOCHENTAGE_L=['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
-const MAHLZEITEN=['fruehstueck','mittag','abendessen','snack','dessert'];
-const MAHLZEITEN_L={fruehstueck:'☀️ Frühstück',mittag:'🕛 Mittag',abendessen:'🌙 Abendessen',snack:'🍎 Snack',dessert:'🍮 Dessert'};
+const MAHLZEITEN=['fruehstueck','mittag','abendessen','snack','dessert','unterwegs'];
+const MAHLZEITEN_L={fruehstueck:'☀️ Frühstück',mittag:'🕛 Mittag',abendessen:'🌙 Abendessen',snack:'🍎 Snack',dessert:'🍮 Dessert',unterwegs:'🚗 Unterwegs'};
 const PERSONEN=['familie','friedi','finn'];
 const PERSONEN_L={familie:'👨‍👩 Alle',friedi:'👧 Friedi',finn:'👦 Finn'};
 

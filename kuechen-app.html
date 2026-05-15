@@ -1204,7 +1204,7 @@ function renderPlan(){
         const raw=slotData[p];
         const arr=Array.isArray(raw)?raw:(raw?[raw]:[]);
         const chips=arr.map((rez,ri)=>
-          `<span class="plan-rez-chip" onclick="planKochen('${key}','${tag}','${m}','${p}',${ri})" style="cursor:pointer" title="Rezept öffnen"><span class="plan-chip-name">${rez.emoji||'🍳'} ${rez.name}</span><button class="plan-chip-del" onclick="event.stopPropagation();planRemove('${key}','${tag}','${m}','${p}',${ri})">✕</button></span>`
+          `<span class="plan-rez-chip" onclick="planKochen('${key}','${tag}','${m}','${p}',${ri})" style="cursor:pointer" title="${rez.id?'Rezept öffnen':'Auf Chefkoch suchen'}"><span class="plan-chip-name">${rez.emoji||'🍳'} ${rez.name}${rez.id?'':' 🔍'}</span><button class="plan-chip-del" onclick="event.stopPropagation();planRemove('${key}','${tag}','${m}','${p}',${ri})">✕</button></span>`
         ).join('');
         return `<div class="plan-person-row"><span class="plan-person-label">${PERSONEN_L[p]}</span><div class="plan-rez-chips">${chips}<button class="plan-add-chip" onclick="planChoose('${key}','${tag}','${m}','${p}')">+</button></div></div>`;
       }).join('');
@@ -1268,8 +1268,12 @@ function planKochen(key,tag,mahlzeit,person,index){
   const raw=wochenplan[key]?.[tag]?.[mahlzeit]?.[person];
   const rez=Array.isArray(raw)?raw[index]:raw;
   if(!rez)return;
-  nav('rezepte',document.querySelectorAll('.nav-btn')[1]);
-  setTimeout(()=>showRez(rez.id),100);
+  if(rez.id){
+    nav('rezepte',document.querySelectorAll('.nav-btn')[1]);
+    setTimeout(()=>showRez(rez.id),100);
+  }else{
+    window.open(`https://www.chefkoch.de/suche.php?suche=${encodeURIComponent(rez.name)}`, '_blank');
+  }
 }
 // ── Ende Wochenplan ─────────────────────────────────────────────────
 

@@ -158,6 +158,13 @@
   .plan-chip-del{background:none;border:none;cursor:pointer;padding:0;font-size:13px;color:var(--text3);font-family:'DM Sans',sans-serif;line-height:1}
   .plan-add-chip{background:none;border:1px dashed var(--border);border-radius:20px;padding:4px 11px;font-size:13px;color:var(--text3);cursor:pointer;font-family:'DM Sans',sans-serif;flex-shrink:0;transition:all .15s}
   .plan-add-chip:hover{border-color:var(--accent);color:var(--accent)}
+  .wk-preview{margin-top:8px}
+  .wk-day-block{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px}
+  .wk-day-name{font-weight:600;font-size:13px;color:var(--accent);margin-bottom:8px}
+  .wk-meal-row{display:flex;gap:8px;margin-bottom:4px;font-size:13px;align-items:baseline}
+  .wk-meal-label{color:var(--text3);font-size:11px;width:70px;flex-shrink:0}
+  .wk-meal-person{color:var(--text3);font-size:11px;margin-right:4px}
+  .wk-meal-name{color:var(--text);flex:1}
   .plan-slot-group{border-bottom:1px solid var(--border)}
   .plan-slot-group:last-child{border-bottom:none}
   .plan-mahlzeit-header{padding:7px 16px 3px;font-size:10px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;background:rgba(200,169,110,.06)}
@@ -294,8 +301,14 @@
 
   <div class="page content" id="page-ki">
     <div class="section-title">Was koche ich?</div>
-    <div class="section-sub">KI schlägt Rezepte aus eurem Bestand vor</div>
-    <div class="ki-box">
+    <div class="section-sub">KI schlägt Rezepte vor</div>
+    <div class="tabs" style="margin-bottom:16px">
+      <button class="tab active" id="ki-tab-heute" onclick="kiModeTab('heute',this)">🍽 Heute</button>
+      <button class="tab" id="ki-tab-woche" onclick="kiModeTab('woche',this)">🗓 Wochenplan</button>
+    </div>
+
+    <!-- Modus: Heute -->
+    <div id="ki-heute-box" class="ki-box">
       <div class="ki-title">🤖 KI-Vorschläge</div>
       <div class="ki-sub">Wähle Filter und Zutaten</div>
       <div class="filter-panel" style="background:none;padding:0;box-shadow:none">
@@ -345,6 +358,42 @@
       <div class="zutaten-chips" id="ki-zut"></div>
       <button class="btn-primary" style="margin-top:16px" onclick="kiVorschlag()">Rezepte vorschlagen lassen</button>
       <div id="ki-result" style="margin-top:16px"></div>
+    </div>
+
+    <!-- Modus: Wochenplan -->
+    <div id="ki-woche-box" class="ki-box" style="display:none">
+      <div class="ki-title">🗓 KI-Wochenplan</div>
+      <div class="ki-sub">KI plant eure ganze Woche</div>
+      <div class="filter-label" style="margin-top:4px">Für wen?</div>
+      <div class="zutaten-chips" style="margin-bottom:12px">
+        <span class="chip selected" data-wk="person" data-val="familie" onclick="wkChip(this)">👨‍👩 Alle</span>
+        <span class="chip" data-wk="person" data-val="friedi" onclick="wkChip(this)">👧 Friedi</span>
+        <span class="chip" data-wk="person" data-val="finn" onclick="wkChip(this)">👦 Finn</span>
+      </div>
+      <div class="filter-label">Welche Mahlzeiten?</div>
+      <div class="zutaten-chips" style="margin-bottom:12px">
+        <span class="chip" data-wk="mahlzeit" data-val="fruehstueck" onclick="wkChip(this)">☀️ Frühstück</span>
+        <span class="chip selected" data-wk="mahlzeit" data-val="mittag" onclick="wkChip(this)">🕛 Mittag</span>
+        <span class="chip selected" data-wk="mahlzeit" data-val="abendessen" onclick="wkChip(this)">🌙 Abendessen</span>
+        <span class="chip" data-wk="mahlzeit" data-val="snack" onclick="wkChip(this)">🍎 Snack</span>
+        <span class="chip" data-wk="mahlzeit" data-val="dessert" onclick="wkChip(this)">🍮 Dessert</span>
+      </div>
+      <div class="filter-label">Vorlieben (optional)</div>
+      <div class="zutaten-chips" style="margin-bottom:12px;flex-wrap:wrap">
+        <span class="chip" data-wk="pref" data-val="fisch" onclick="wkChip(this)">🐟 Fisch</span>
+        <span class="chip" data-wk="pref" data-val="rind" onclick="wkChip(this)">🥩 Rind</span>
+        <span class="chip" data-wk="pref" data-val="schwein" onclick="wkChip(this)">🐷 Schwein</span>
+        <span class="chip" data-wk="pref" data-val="haehnchen" onclick="wkChip(this)">🍗 Hähnchen</span>
+        <span class="chip" data-wk="pref" data-val="vegetarisch" onclick="wkChip(this)">🌿 Veggie</span>
+        <span class="chip" data-wk="pref" data-val="schnell" onclick="wkChip(this)">⚡ Schnell</span>
+      </div>
+      <div class="filter-label">Welche Woche?</div>
+      <div class="zutaten-chips" style="margin-bottom:16px">
+        <span class="chip selected" data-wk="woche" data-val="diese" onclick="wkChipEinzel(this)">📅 Diese Woche</span>
+        <span class="chip" data-wk="woche" data-val="naechste" onclick="wkChipEinzel(this)">➡️ Nächste Woche</span>
+      </div>
+      <button class="btn-primary" style="width:100%" onclick="kiWochenplan()">🗓 Wochenplan erstellen</button>
+      <div id="ki-woche-result" style="margin-top:16px"></div>
     </div>
   </div>
 
@@ -914,6 +963,112 @@ async function saveManual(){
 }
 
 function kiChip(el){el.classList.toggle('selected');}
+
+// ── KI Wochenplan ───────────────────────────────────────────────────
+function kiModeTab(mode,btn){
+  document.querySelectorAll('#page-ki .tabs .tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('ki-heute-box').style.display=mode==='heute'?'':'none';
+  document.getElementById('ki-woche-box').style.display=mode==='woche'?'':'none';
+}
+function wkChip(el){el.classList.toggle('selected');}
+function wkChipEinzel(el){
+  document.querySelectorAll(`[data-wk="woche"]`).forEach(c=>c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+function wkSel(group){return[...document.querySelectorAll(`[data-wk="${group}"].selected`)].map(c=>c.dataset.val);}
+
+async function kiWochenplan(){
+  const personen=wkSel('person');
+  const mahlzeiten=wkSel('mahlzeit');
+  const prefs=wkSel('pref');
+  const woche=wkSel('woche')[0]||'diese';
+  const result=document.getElementById('ki-woche-result');
+  if(!mahlzeiten.length)return result.innerHTML='<div style="color:#c47a7a;font-size:13px">Bitte mindestens eine Mahlzeit auswählen.</div>';
+  if(!personen.length)return result.innerHTML='<div style="color:#c47a7a;font-size:13px">Bitte mindestens eine Person auswählen.</div>';
+  result.innerHTML='<div class="ki-loading"><div class="spinner"></div> KI plant eure Woche…</div>';
+
+  const hauptMap={'fisch':'Fisch','rind':'Rind','schwein':'Schwein','haehnchen':'Hähnchen','vegetarisch':'Vegetarisch','vegan':'Vegan'};
+  const haupt=rezepte.filter(r=>hauptMap[r.kategorie]);
+  const salate=rezepte.filter(r=>r.kategorie==='salat_rez');
+  const dressings=rezepte.filter(r=>r.kategorie==='dressing');
+  const desserts=rezepte.filter(r=>['dessert','kuchen'].includes(r.kategorie));
+  const fruehstueck=rezepte.filter(r=>r.kategorie==='fruehstueck');
+  const rList=t=>t.map(r=>`${r.name}`).join(', ');
+  const PERSONEN_DE={familie:'Alle (Christian & Yvonne)',friedi:'Friedi (Kind, wählerisch)',finn:'Finn (Kind)'};
+  const MAHLZEIT_DE={fruehstueck:'Frühstück',mittag:'Mittagessen',abendessen:'Abendessen',snack:'Snack',dessert:'Dessert'};
+
+  let prompt=`Du bist Kochassistent. Erstelle einen Wochenplan (Montag bis Sonntag).\n\n`;
+  prompt+=`UNSERE REZEPTE:\n`;
+  if(haupt.length)prompt+=`Hauptgerichte: ${rList(haupt)}\n`;
+  if(salate.length)prompt+=`Salate: ${rList(salate)}\n`;
+  if(dressings.length)prompt+=`Dressings: ${rList(dressings)}\n`;
+  if(desserts.length)prompt+=`Desserts: ${rList(desserts)}\n`;
+  if(fruehstueck.length)prompt+=`Frühstück: ${rList(fruehstueck)}\n`;
+  prompt+=`\nPERSONEN: ${personen.map(p=>PERSONEN_DE[p]).join(', ')}\n`;
+  prompt+=`MAHLZEITEN: ${mahlzeiten.map(m=>MAHLZEIT_DE[m]).join(', ')}\n`;
+  if(prefs.length)prompt+=`VORLIEBEN: ${prefs.join(', ')}\n`;
+  prompt+=`\nAntworte NUR mit validem JSON in exakt diesem Format (keine Erklärung, kein Markdown):\n`;
+  prompt+=`{"montag":{"mittag":{"familie":["Gericht A","Beilage B"]},"abendessen":{"familie":["Gericht C"],"friedi":["Kindergericht"]}},"dienstag":{...},...}\n`;
+  prompt+=`\nRegeln:\n- Nutze unsere Rezeptnamen exakt wenn passend, erfinde neue Ideen wenn nötig\n- Mehrere Einträge im Array für Kombinationen (z.B. Hauptgericht + Salat)\n- Nur ausgewählte Personen und Mahlzeiten einschließen\n- Abwechslungsreich, nicht 2x dasselbe Hauptgericht\n- Für Kinder kindgerechte Portionen/Gerichte`;
+
+  try{
+    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
+    const data=await resp.json();
+    const text=data.content?.map(c=>c.text||'').join('')||'';
+    const json=text.replace(/```json|```/g,'').trim();
+    const plan=JSON.parse(json);
+    const offset=woche==='naechste'?1:0;
+    result.innerHTML=renderWkPreview(plan,personen,mahlzeiten)+`<button class="btn-primary" style="width:100%;margin-top:16px" onclick="kiPlanUebernehmen(${JSON.stringify(JSON.stringify(plan))},${offset})">✓ In Wochenplan übernehmen</button><button class="btn-secondary" style="width:100%;margin-top:8px" onclick="kiWochenplan()">↺ Neuer Vorschlag</button>`;
+  }catch(e){result.innerHTML='<div style="color:#c47a7a;font-size:13px;padding:12px">Fehler beim Erstellen. Bitte nochmal versuchen.</div>';}
+}
+
+function renderWkPreview(plan,personen,mahlzeiten){
+  const TAGE=['montag','dienstag','mittwoch','donnerstag','freitag','samstag','sonntag'];
+  const TAGE_L=['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
+  const ML={fruehstueck:'☀️ Frühstück',mittag:'🕛 Mittag',abendessen:'🌙 Abendessen',snack:'🍎 Snack',dessert:'🍮 Dessert'};
+  const PL={familie:'👨‍👩',friedi:'👧',finn:'👦'};
+  return '<div class="wk-preview">'+TAGE.map((tag,i)=>{
+    const day=plan[tag];if(!day)return'';
+    const rows=mahlzeiten.map(m=>{
+      const slot=day[m];if(!slot)return'';
+      const personRows=personen.map(p=>{
+        const arr=slot[p];if(!arr||!arr.length)return'';
+        return`<div class="wk-meal-row"><span class="wk-meal-label">${ML[m]||m}</span><span class="wk-meal-person">${PL[p]||p}</span><span class="wk-meal-name">${arr.join(' + ')}</span></div>`;
+      }).join('');
+      return personRows;
+    }).join('');
+    if(!rows.trim())return'';
+    return`<div class="wk-day-block"><div class="wk-day-name">${TAGE_L[i]}</div>${rows}</div>`;
+  }).join('')+'</div>';
+}
+
+async function kiPlanUebernehmen(planJson,offset){
+  const plan=JSON.parse(planJson);
+  const key=weekKey(offset);
+  if(!wochenplan[key])await loadWochenplan(key);
+  const TAGE=['montag','dienstag','mittwoch','donnerstag','freitag','samstag','sonntag'];
+  for(const tag of TAGE){
+    if(!plan[tag])continue;
+    if(!wochenplan[key][tag])wochenplan[key][tag]={};
+    for(const[mahlzeit,personData]of Object.entries(plan[tag])){
+      if(!wochenplan[key][tag][mahlzeit])wochenplan[key][tag][mahlzeit]={};
+      for(const[person,namen]of Object.entries(personData)){
+        const arr=Array.isArray(namen)?namen:[namen];
+        wochenplan[key][tag][mahlzeit][person]=arr.map(name=>{
+          const found=rezepte.find(r=>r.name.toLowerCase()===name.toLowerCase())||rezepte.find(r=>name.toLowerCase().includes(r.name.toLowerCase().split(' ')[0]));
+          return found?{id:found.id,name:found.name,emoji:found.emoji||'🍳'}:{name,emoji:'🍳'};
+        });
+      }
+    }
+  }
+  await saveWochenplan(key);
+  planWeekOffset=offset;
+  const planBtn=document.querySelectorAll('.nav-btn')[3];
+  nav('plan',planBtn);
+  planLoadAndRender();
+}
+// ── Ende KI Wochenplan ──────────────────────────────────────────────
 
 function renderKiZut(){
   const chips=document.getElementById('ki-zut');

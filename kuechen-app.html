@@ -887,11 +887,11 @@ function resizeImage(file,maxPx=1100,quality=0.78){
         if(!b)return rej(new Error('Bild konnte nicht verarbeitet werden'));
         const fr=new FileReader();
         fr.onload=()=>res(fr.result.split(',')[1]);
-        fr.onerror=rej;
+        fr.onerror=()=>rej(new Error('Foto konnte nicht eingelesen werden'));
         fr.readAsDataURL(b);
       },'image/jpeg',quality);
     };
-    img.onerror=(e)=>{cleanup();rej(e);};
+    img.onerror=()=>{cleanup();rej(new Error('Foto konnte nicht geladen werden'));};
     img.src=url;
   });
 }
@@ -923,11 +923,12 @@ async function rezFromFoto(event){
     rez.quelle='Foto';
   }catch(e){
     restoreUploadArea();
-    const istMemory=e.message&&(e.message.toLowerCase().includes('memory')||e.message.toLowerCase().includes('speicher')||e.message.toLowerCase().includes('blob'));
+    const msg=e?.message||String(e)||'Unbekannter Fehler';
+    const istMemory=msg.toLowerCase().includes('memory')||msg.toLowerCase().includes('speicher')||msg.toLowerCase().includes('blob');
     if(istMemory){
       if(confirm('Zu wenig Arbeitsspeicher.\n\nApp jetzt neu laden und nochmal versuchen?')){location.reload();}
     }else{
-      alert('Fehler beim Auslesen: '+e.message);
+      alert('Fehler beim Auslesen: '+msg);
     }
     return;
   }

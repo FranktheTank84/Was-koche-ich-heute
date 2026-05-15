@@ -545,6 +545,18 @@ async function init(){
   sync('loading');
   await Promise.all([loadB(),loadR()]);
   renderAll();
+  // Letzte aktive Seite wiederherstellen (z.B. nach Kamera-Reload)
+  const navPages=['bestand','rezepte','ki','plan','einkauf'];
+  const savedPage=localStorage.getItem('kb_page')||'bestand';
+  const navBtns=document.querySelectorAll('.nav-btn');
+  const idx=navPages.indexOf(savedPage);
+  if(idx>=0){
+    document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+    navBtns.forEach(b=>b.classList.remove('active'));
+    document.getElementById('page-'+savedPage).classList.add('active');
+    navBtns[idx].classList.add('active');
+    if(savedPage==='plan')planLoadAndRender();
+  }
   db.channel('b').on('postgres_changes',{event:'*',schema:'public',table:'bestand'},()=>loadB().then(renderB)).subscribe();
   db.channel('r').on('postgres_changes',{event:'*',schema:'public',table:'rezepte'},()=>loadR().then(renderR)).subscribe();
 }
@@ -1088,7 +1100,7 @@ function planKochen(key,tag,mahlzeit,person){
 }
 // ── Ende Wochenplan ─────────────────────────────────────────────────
 
-function nav(p,btn){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));document.getElementById('page-'+p).classList.add('active');btn.classList.add('active');}
+function nav(p,btn){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));document.getElementById('page-'+p).classList.add('active');btn.classList.add('active');localStorage.setItem('kb_page',p);}
 
 document.getElementById('plan-modal').addEventListener('click',e=>{if(e.target===document.getElementById('plan-modal'))closeModal('plan-modal');});
 document.getElementById('rez-modal').addEventListener('click',e=>{if(e.target===document.getElementById('rez-modal'))closeModal('rez-modal');});

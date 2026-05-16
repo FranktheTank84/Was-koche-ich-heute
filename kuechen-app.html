@@ -207,7 +207,11 @@
       <button class="tab" onclick="bTab('vorrat',this)">🗄️ Vorrat</button>
     </div>
     <div class="add-form">
-      <div class="add-form-title">+ Neuer Artikel</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="add-form-title" style="margin-bottom:0">+ Neuer Artikel</div>
+        <button class="btn-secondary" style="display:flex;align-items:center;gap:6px;padding:8px 14px;font-size:13px;border-radius:20px" onclick="document.getElementById('bestand-cam-in').click()">📷 Foto scannen</button>
+        <input type="file" id="bestand-cam-in" accept="image/*" capture="environment" style="display:none" onchange="bestandFromFoto(event)"/>
+      </div>
       <div class="form-row">
         <input class="form-input" id="ni-name" placeholder="Name (z.B. Hähnchenbrust)"/>
         <input class="form-input" id="ni-emoji" placeholder="Emoji" style="max-width:80px"/>
@@ -522,6 +526,50 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="bestand-scan-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('bestand-scan-modal')">✕</button>
+    <div class="modal-title">📷 Artikel prüfen & speichern</div>
+    <div style="clear:both;margin-top:12px"></div>
+    <div id="bs-loading" style="display:none;flex-direction:column;align-items:center;gap:12px;padding:24px 0">
+      <div class="spinner"></div>
+      <div style="font-size:14px;color:var(--text3)">KI liest Artikel aus Foto…</div>
+    </div>
+    <div id="bs-fields" style="display:none">
+      <div style="font-size:13px;color:var(--text3);margin-bottom:12px">Bitte prüfen und ggf. anpassen:</div>
+      <div class="form-row" style="margin-bottom:10px">
+        <input class="form-input" id="bs-name" placeholder="Name"/>
+        <input class="form-input" id="bs-emoji" placeholder="Emoji" style="max-width:70px"/>
+      </div>
+      <div class="form-row" style="margin-bottom:10px">
+        <select class="form-select" id="bs-ort">
+          <option value="kuehlschrank">❄️ Kühlschrank</option>
+          <option value="gefrierschrank">🧊 Gefrierschrank</option>
+          <option value="vorrat">🗄️ Vorrat</option>
+        </select>
+        <select class="form-select" id="bs-liste">
+          <option value="woechentlich">📅 Wöchentlich</option>
+          <option value="metro">🏪 Metro</option>
+        </select>
+      </div>
+      <div class="form-row" style="margin-bottom:10px">
+        <select class="form-select" id="bs-einheit" style="max-width:130px">
+          <option>Stück</option><option>Portionen</option><option>Pakete</option><option>Gläser</option><option>Dosen</option><option>Flasche</option><option>g</option><option>kg</option><option>ml</option><option>l</option>
+        </select>
+        <input class="form-input" id="bs-qty" type="number" value="1" min="0" style="max-width:80px" placeholder="Menge"/>
+      </div>
+      <div class="form-row" style="margin-bottom:16px">
+        <input class="form-input" id="bs-mhd" type="date" style="max-width:180px" title="Mindesthaltbarkeitsdatum"/>
+        <span style="color:var(--text3);font-size:13px;align-self:center;flex:1">MHD (falls sichtbar/bekannt)</span>
+      </div>
+      <div class="form-row">
+        <button class="btn-add" style="flex:1" onclick="saveBestandScan()">💾 Speichern</button>
+        <button class="btn-secondary" onclick="closeModal('bestand-scan-modal')">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="man-modal">
   <div class="modal">
     <button class="modal-close" onclick="closeModal('man-modal')">✕</button>
@@ -685,6 +733,70 @@ async function addItem(){
     document.getElementById('ni-name').value='';document.getElementById('ni-emoji').value='';document.getElementById('ni-qty').value='1';document.getElementById('ni-mhd').value='';document.getElementById('ni-groesse').value='';
     await loadB();renderB();renderKiZut();
   }catch(e){alert('Fehler: '+e.message);}
+}
+
+async function bestandFromFoto(event){
+  const file=event.target.files[0];if(!file)return;
+  // Modal öffnen + Ladeanimation zeigen
+  const modal=document.getElementById('bestand-scan-modal');
+  modal.classList.add('open');
+  document.getElementById('bs-loading').style.display='flex';
+  document.getElementById('bs-fields').style.display='none';
+  let artikel=null;
+  try{
+    const b64=await resizeImage(file);
+    document.getElementById('bestand-cam-in').value='';
+    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({
+      model:'claude-sonnet-4-6',max_tokens:400,
+      messages:[{role:'user',content:[
+        {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
+        {type:'text',text:'Erkenne dieses Lebensmittel/Produkt auf dem Foto. Antworte NUR mit reinem JSON ohne Markdown:\n{"name":"Produktname auf Deutsch","emoji":"passendes Emoji","ort":"kuehlschrank|gefrierschrank|vorrat","einheit":"Stück|Pakete|Gläser|Dosen|Flasche|g|kg|ml|l","qty":1,"mhd":"YYYY-MM-DD oder null"}\n\nRegeln: mhd nur setzen wenn klar lesbar auf dem Foto. ort nach üblicher Lagerung bestimmen (frisches Fleisch/Milch→kuehlschrank, Tiefkühlware→gefrierschrank, Trockenwaren/Konserven→vorrat).'}
+      ]}]
+    })});
+    const data=await resp.json();
+    const text=data.content?.map(c=>c.text||'').join('')||'';
+    artikel=JSON.parse(text.replace(/```json|```/g,'').trim());
+  }catch(e){
+    document.getElementById('bestand-cam-in').value='';
+    closeModal('bestand-scan-modal');
+    const msg=e?.message||String(e)||'Unbekannter Fehler';
+    const istMemory=msg.toLowerCase().includes('memory')||msg.toLowerCase().includes('speicher')||msg.toLowerCase().includes('blob');
+    if(istMemory){if(confirm('Zu wenig Arbeitsspeicher.\n\nApp jetzt neu laden und nochmal versuchen?')){location.reload();}}
+    else{alert('Fehler beim Auslesen: '+msg);}
+    return;
+  }
+  // Felder befüllen
+  document.getElementById('bs-name').value=artikel.name||'';
+  document.getElementById('bs-emoji').value=artikel.emoji||'📦';
+  const ortVal=artikel.ort||'kuehlschrank';
+  document.getElementById('bs-ort').value=['kuehlschrank','gefrierschrank','vorrat'].includes(ortVal)?ortVal:'kuehlschrank';
+  const einheitOpts=['Stück','Portionen','Pakete','Gläser','Dosen','Flasche','g','kg','ml','l'];
+  document.getElementById('bs-einheit').value=einheitOpts.includes(artikel.einheit)?artikel.einheit:'Stück';
+  document.getElementById('bs-qty').value=artikel.qty||1;
+  document.getElementById('bs-mhd').value=artikel.mhd&&artikel.mhd!=='null'?artikel.mhd:'';
+  // Ladeanimation aus, Felder anzeigen
+  document.getElementById('bs-loading').style.display='none';
+  document.getElementById('bs-fields').style.display='block';
+}
+
+async function saveBestandScan(){
+  const name=document.getElementById('bs-name').value.trim();
+  if(!name){alert('Bitte einen Namen eingeben.');return;}
+  const mhd=document.getElementById('bs-mhd').value||null;
+  const einheit=document.getElementById('bs-einheit').value;
+  const liste=document.getElementById('bs-liste').value;
+  try{
+    await db.from('bestand').insert({
+      name,
+      emoji:document.getElementById('bs-emoji').value||'📦',
+      ort:document.getElementById('bs-ort').value,
+      einheit,liste,
+      qty:parseFloat(document.getElementById('bs-qty').value)||1,
+      min_qty:1,mhd
+    });
+    closeModal('bestand-scan-modal');
+    await loadB();renderB();renderKiZut();
+  }catch(e){alert('Fehler beim Speichern: '+e.message);}
 }
 
 async function changeQty(id,delta){
@@ -1302,7 +1414,7 @@ async function kiVorschlag(){
   prompt+='\nAuf Deutsch, klar und praktisch.';
 
   try{
-    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,messages:[{role:'user',content:prompt}]})});
+    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:3500,messages:[{role:'user',content:prompt}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
     result.innerHTML=`<div class="ki-result" style="white-space:pre-wrap;line-height:1.6;font-size:14px">${text}</div>`;

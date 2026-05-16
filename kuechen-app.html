@@ -1078,6 +1078,8 @@ async function kiWochenplan(){
   if(!personen.length)return result.innerHTML='<div style="color:#c47a7a;font-size:13px">Bitte mindestens eine Person auswählen.</div>';
   result.innerHTML='<div class="ki-loading"><div class="spinner"></div> KI plant eure Woche…</div>';
 
+  // Rezeptliste kompakt halten — max 25 pro Kategorie damit der Prompt nicht zu groß wird
+  const cap=arr=>arr.slice(0,25).map(r=>r.name).join(', ')+(arr.length>25?` … +${arr.length-25} weitere`:'');
   const hauptMap={'fisch':'Fisch','rind':'Rind','schwein':'Schwein','haehnchen':'Hähnchen','vegetarisch':'Vegetarisch','vegan':'Vegan'};
   const haupt=rezepte.filter(r=>hauptMap[r.kategorie]);
   const salate=rezepte.filter(r=>r.kategorie==='salat_rez');
@@ -1085,37 +1087,37 @@ async function kiWochenplan(){
   const desserts=rezepte.filter(r=>['dessert','kuchen'].includes(r.kategorie));
   const fruehstueck=rezepte.filter(r=>r.kategorie==='fruehstueck');
   const unterwegsRez=rezepte.filter(r=>r.kategorie==='unterwegs');
-  const rList=t=>t.map(r=>`${r.name}`).join(', ');
   const PERSONEN_DE={familie:'Alle (Christian & Yvonne)',friedi:'Friedi (Kind, wählerisch)',finn:'Finn (Kind)'};
   const MAHLZEIT_DE={fruehstueck:'Frühstück',mittag:'Mittagessen',abendessen:'Abendessen',snack:'Snack',dessert:'Dessert',unterwegs:'Unterwegs'};
 
   let prompt=`Du bist Kochassistent. Erstelle einen Wochenplan (Montag bis Sonntag).\n\n`;
-  prompt+=`UNSERE REZEPTE:\n`;
-  if(haupt.length)prompt+=`Hauptgerichte: ${rList(haupt)}\n`;
-  if(salate.length)prompt+=`Salate: ${rList(salate)}\n`;
-  if(dressings.length)prompt+=`Dressings: ${rList(dressings)}\n`;
-  if(desserts.length)prompt+=`Desserts: ${rList(desserts)}\n`;
-  if(fruehstueck.length)prompt+=`Frühstück: ${rList(fruehstueck)}\n`;
-  if(unterwegsRez.length)prompt+=`Unterwegs-Mahlzeiten: ${rList(unterwegsRez)}\n`;
+  prompt+=`UNSERE REZEPTE (Auswahl):\n`;
+  if(haupt.length)prompt+=`Hauptgerichte: ${cap(haupt)}\n`;
+  if(salate.length)prompt+=`Salate: ${cap(salate)}\n`;
+  if(dressings.length)prompt+=`Dressings: ${cap(dressings)}\n`;
+  if(desserts.length)prompt+=`Desserts: ${cap(desserts)}\n`;
+  if(fruehstueck.length)prompt+=`Frühstück: ${cap(fruehstueck)}\n`;
+  if(unterwegsRez.length)prompt+=`Unterwegs: ${cap(unterwegsRez)}\n`;
   prompt+=`\nPERSONEN: ${personen.map(p=>PERSONEN_DE[p]).join(', ')}\n`;
   prompt+=`MAHLZEITEN: ${mahlzeiten.map(m=>MAHLZEIT_DE[m]).join(', ')}\n`;
   if(prefs.length)prompt+=`VORLIEBEN: ${prefs.join(', ')}\n`;
-  if(wkWunsch)prompt+=`BESONDERER WUNSCH FÜR DIESE WOCHE: ${wkWunsch} — bitte unbedingt einplanen\n`;
-  prompt+=`\nHINWEIS: Die Familie möchte langfristig etwas leichter essen — aber ohne Verzicht und ohne Druck. Wenn es passt, dürfen Vorschläge gerne etwas ausgewogener sein, aber Lieblingsgerichte und Genuss haben immer Vorrang. Kein Zwang, kein Geißeln.\n`;
-  if(mahlzeiten.includes('unterwegs'))prompt+=`\nUNTERWEGS-REGELN (für Christian): Er isst im Auto während der Fahrt. Die Mahlzeit muss ohne Besteck essbar sein (z.B. Wraps, belegte Brote, Finger Food, Snackboxen). Eine Kühlbox ist dabei — kühlpflichtige Sachen sind kein Problem. Bitte besonders auf gesund und kalorienarm achten.\n`;
-  prompt+=`\nAntworte NUR mit validem JSON in exakt diesem Format (keine Erklärung, kein Markdown):\n`;
+  if(wkWunsch)prompt+=`WUNSCH DIESE WOCHE: ${wkWunsch}\n`;
+  prompt+=`HINWEIS: Gesünder essen gewünscht, aber ohne Verzicht — Genuss hat Vorrang.\n`;
+  if(mahlzeiten.includes('unterwegs'))prompt+=`UNTERWEGS: Nur ohne Besteck essbar (Wraps, Sandwiches, Finger Food), Kühlbox vorhanden.\n`;
+  prompt+=`\nAntworte NUR mit JSON, kein Markdown, keine Erklärung:\n`;
   prompt+=`{"montag":{"mittag":{"familie":["Gericht A","Beilage B"]},"abendessen":{"familie":["Gericht C"],"friedi":["Kindergericht"]}},"dienstag":{...},...}\n`;
-  prompt+=`\nRegeln:\n- Nutze unsere Rezeptnamen exakt wenn passend, erfinde neue Ideen wenn nötig\n- Mehrere Einträge im Array für Kombinationen (z.B. Hauptgericht + Salat)\n- Nur ausgewählte Personen und Mahlzeiten einschließen\n- Abwechslungsreich, nicht 2x dasselbe Hauptgericht\n- Für Kinder kindgerechte Portionen/Gerichte`;
+  prompt+=`Regeln: Rezeptnamen exakt übernehmen wenn passend, sonst neue Ideen erfinden. Mehrere Array-Einträge für Kombinationen. Nur gewählte Personen/Mahlzeiten. Abwechslungsreich. Kinder bekommen kindgerechte Gerichte.`;
 
+  const weekOffset=woche==='naechste'?1:0;
   try{
-    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
+    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:4000,messages:[{role:'user',content:prompt}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
-    const json=text.replace(/```json|```/g,'').trim();
-    _kiPlan=plan; _kiPlanOffset=offset;
+    const plan=JSON.parse(text.replace(/```json|```/g,'').trim());
+    _kiPlan=plan; _kiPlanOffset=weekOffset;
     result.innerHTML=renderWkPreview(plan,personen,mahlzeiten)
       +`<div style="display:flex;gap:8px;margin-top:16px"><button class="btn-primary" style="flex:1" onclick="kiPlanUebernehmen()">✓ Alles übernehmen</button><button class="btn-secondary" style="flex:1" onclick="kiWochenplan()">↺ Neu</button></div>`;
-  }catch(e){result.innerHTML='<div style="color:#c47a7a;font-size:13px;padding:12px">Fehler beim Erstellen. Bitte nochmal versuchen.</div>';}
+  }catch(e){result.innerHTML=`<div style="color:#c47a7a;font-size:13px;padding:12px">Fehler: ${e?.message||'Bitte nochmal versuchen.'}</div>`;}
 }
 
 let _kiPlan=null, _kiPlanOffset=0;

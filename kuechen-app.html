@@ -1253,82 +1253,141 @@ async function kiVorschlag(){
 }
 
 let _grundstockDone=new Set(JSON.parse(localStorage.getItem('kb_grundstock_done')||'[]'));
+let _grundstockKI=JSON.parse(localStorage.getItem('kb_grundstock_ki')||'null');
 
 function grundstockAnalyse(){
+  const el=document.getElementById('grundstock-list');if(!el)return;
+  // Gecachtes Ergebnis direkt anzeigen
+  if(_grundstockKI){renderGrundstockKI(el);return;}
   const total=rezepte.length;
-  const el=document.getElementById('grundstock-list');
-  if(!el)return;
-  if(!total){el.innerHTML='<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">Noch keine Rezepte vorhanden.<br>Erst Rezepte hochladen!</div></div>';return;}
-  // Zutaten zählen
+  if(!total){
+    el.innerHTML='<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">Noch keine Rezepte vorhanden.<br>Erst Rezepte hochladen!</div></div>';return;
+  }
+  el.innerHTML=`<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px;font-size:13px;line-height:1.6;color:var(--text3)">
+    Ihr habt <strong style="color:var(--text)">${total} Rezepte</strong> hinterlegt. Die KI analysiert alle Zutaten und erstellt einen strukturierten Vorratsplan — aufgeteilt nach Gefrierschrank, Vorkochen, Trockenware und Basics.<br><br>
+    <em>Tipp: Das Ergebnis wird gespeichert und muss nicht jedes Mal neu erstellt werden.</em>
+  </div>
+  <button class="btn-primary" style="width:100%" onclick="grundstockKIStarten()">🤖 KI-Vorratsplan erstellen</button>`;
+}
+
+async function grundstockKIStarten(){
+  const el=document.getElementById('grundstock-list');if(!el)return;
+  el.innerHTML='<div class="ki-loading"><div class="spinner"></div> KI analysiert eure '+rezepte.length+' Rezepte und baut den Vorratsplan…</div>';
+  // Zutatenhäufigkeit berechnen
+  const total=rezepte.length;
   const map={};
   rezepte.forEach(r=>{
     if(!Array.isArray(r.zutaten))return;
     const gesehen=new Set();
     r.zutaten.forEach(z=>{
-      const roh=(z.name||'').trim();
-      if(!roh||roh.length<2)return;
+      const roh=(z.name||'').trim();if(!roh||roh.length<2)return;
       const key=roh.toLowerCase();
       if(!map[key])map[key]={anzeige:roh,count:0,mengen:{}};
       if(!gesehen.has(key)){map[key].count++;gesehen.add(key);}
       if(z.menge&&z.einheit){
-        const u=(z.einheit||'').toLowerCase().trim();
+        const u=(z.einheit||'').trim();
         if(!map[key].mengen[u])map[key].mengen[u]=[];
         map[key].mengen[u].push(parseFloat(z.menge)||0);
       }
     });
   });
-  // Mindestens 20% Häufigkeit, nach Häufigkeit sortiert
-  const MONAT=20;
-  const items=Object.values(map)
-    .filter(x=>x.count/total>=0.20)
-    .sort((a,b)=>b.count-a.count)
+  // Top-Zutaten als Text für die KI aufbereiten
+  const zutatenliste=Object.values(map)
+    .sort((a,b)=>b.count-a.count).slice(0,150)
     .map(x=>{
       const pct=Math.round(x.count/total*100);
-      let mengeText='';
-      const einheiten=Object.entries(x.mengen).sort((a,b)=>b[1].length-a[1].length);
-      if(einheiten.length){
-        const[u,betraege]=einheiten[0];
-        const avg=betraege.reduce((s,v)=>s+v,0)/betraege.length;
-        const monatlich=avg*(x.count/total)*MONAT;
-        if(monatlich>0.1){
-          let gerundet,einheit=u;
-          if(u==='g'&&monatlich>=900){gerundet=(Math.ceil(monatlich/100)/10).toFixed(1).replace('.0','');einheit='kg';}
-          else if(u==='ml'&&monatlich>=900){gerundet=(Math.ceil(monatlich/100)/10).toFixed(1).replace('.0','');einheit='l';}
-          else if(u==='g'||u==='ml')gerundet=Math.ceil(monatlich/10)*10;
-          else gerundet=Math.ceil(monatlich);
-          mengeText=`~${gerundet}${einheit?' '+einheit:''}/Monat`;
-        }
-      }
-      return{name:x.anzeige,pct,mengeText};
-    });
-  if(!items.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">Noch zu wenige Rezepte für eine sinnvolle Analyse.</div></div>';return;}
-  el.innerHTML=`<div style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.5">Zutaten die in mind. 20% aller Rezepte vorkommen — mit geschätztem Monatsbedarf (Basis: ~${MONAT} Kochevents/Monat). Antippen zum Abhaken.</div>`
-    +items.map(item=>{
-      const done=_grundstockDone.has(item.name.toLowerCase());
-      return`<div class="einkauf-item" onclick="grundstockToggle('${item.name.toLowerCase().replace(/'/g,"\\'")}')" style="cursor:pointer;${done?'opacity:.5':''}">
+      const einh=Object.entries(x.mengen).sort((a,b)=>b[1].length-a[1].length);
+      let mStr='';
+      if(einh.length){const[u,b]=einh[0];const avg=b.reduce((s,v)=>s+v,0)/b.length;mStr=` (Ø ${Math.round(avg)} ${u}/Rezept)`;}
+      return`${x.anzeige}: ${pct}%${mStr}`;
+    }).join('\n');
+
+  const prompt=`Du bist Küchenassistent für eine Familie die einen strukturierten Tiefkühl-Baukastensystem aufbauen möchte.
+
+HINTERGRUND:
+- Familie: Christian (Außendienst, isst unterwegs im Auto), Yvonne, 2 Kinder (Friedi, Finn)
+- Neuer Gefrierschrank + Vakuumierer geplant
+- Ziel: Gemüse, Fleisch, Fisch portionsweise einvakuumiert einfrieren
+- Soßen vorkochen und einfrieren
+- Pizzateig mit Soße vorbacken und einfrieren (nur noch belegen & fertig backen)
+- Baukasten-Prinzip: aus Vorräten flexibel kochen
+- Gesünder essen, gerne leichter — aber ohne Verzicht, Genuss hat Vorrang
+
+ZUTATEN AUS ${total} REZEPTEN (Häufigkeit % aller Rezepte, Ø-Menge):
+${zutatenliste}
+
+Erstelle einen praxisnahen Vorratsplan für ~1 Monat (2 Erwachsene + 2 Kinder, ~20 Kochevents/Monat).
+Antworte NUR mit validem JSON, kein Markdown:
+{"kategorien":[{"name":"Einfrieren – Gemüse","emoji":"🥦","tipp":"kurzer Einfrierhinweis","items":[{"name":"Brokkoli","menge":"2 kg","tipp":"in Röschen blanchieren & einfrieren"}]}]}
+
+Verwende diese Kategorien:
+1. "Einfrieren – Gemüse" 🥦
+2. "Einfrieren – Fleisch & Fisch" 🍖
+3. "Vorkochen & Einfrieren" 🫙 (Soßen, Fonds, Pizzateig mit Soße, Suppen etc.)
+4. "Trockenvorrat & Konserven" 🌾
+5. "Gewürze, Öle & Basics" 🧂
+6. "Kühlschrank-Grundstock" 🧀
+
+Nur sinnvolle Einträge je Kategorie. Mengen realistisch. Tipps kurz und praktisch. Alles auf Deutsch.`;
+
+  try{
+    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:3000,messages:[{role:'user',content:prompt}]})});
+    const data=await resp.json();
+    const text=data.content?.map(c=>c.text||'').join('')||'';
+    _grundstockKI=JSON.parse(text.replace(/```json|```/g,'').trim());
+    localStorage.setItem('kb_grundstock_ki',JSON.stringify(_grundstockKI));
+    renderGrundstockKI(el);
+  }catch(e){
+    el.innerHTML=`<div style="color:#c47a7a;padding:12px;font-size:13px">Fehler: ${e?.message||e}</div>
+      <button class="btn-secondary" style="margin-top:8px;width:100%" onclick="grundstockKIStarten()">↺ Nochmal versuchen</button>`;
+  }
+}
+
+function renderGrundstockKI(el){
+  if(!el)el=document.getElementById('grundstock-list');
+  if(!el||!_grundstockKI)return;
+  const kategorien=_grundstockKI.kategorien||[];
+  el.innerHTML=kategorien.map(kat=>{
+    const items=(kat.items||[]).map(item=>{
+      const key=(item.name||'').toLowerCase();
+      const done=_grundstockDone.has(key);
+      const sub=[item.menge,item.tipp].filter(Boolean).join(' · ');
+      return`<div class="einkauf-item" onclick="grundstockToggle('${key.replace(/'/g,"\\'")}')" style="cursor:pointer;${done?'opacity:.45':''}">
         <div style="font-size:20px;width:28px;flex-shrink:0;text-align:center">${done?'✅':'⬜'}</div>
         <div style="flex:1">
-          <div style="font-weight:500;font-size:14px;${done?'text-decoration:line-through;color:var(--text3)':''}">${item.name}</div>
-          <div style="font-size:12px;color:var(--text3)">${item.pct}% der Rezepte${item.mengeText?' · '+item.mengeText:''}</div>
+          <div style="font-weight:500;font-size:14px;${done?'text-decoration:line-through;color:var(--text3)':''}">  ${item.name}</div>
+          ${sub?`<div style="font-size:12px;color:var(--text3)">${sub}</div>`:''}
         </div>
       </div>`;
-    }).join('')
-    +`<div style="margin-top:16px;display:flex;gap:8px">
-        <button class="btn-secondary" style="flex:1" onclick="grundstockAlleReset()">↺ Alle zurücksetzen</button>
-        <button class="btn-secondary" style="flex:1" onclick="grundstockAnalyse()">🔄 Neu analysieren</button>
-      </div>`;
+    }).join('');
+    return`<div style="margin-bottom:20px">
+      <div style="font-weight:700;font-size:15px;margin-bottom:${kat.tipp?'2px':'8px'}">${kat.emoji||''} ${kat.name}</div>
+      ${kat.tipp?`<div style="font-size:12px;color:var(--text3);margin-bottom:8px;font-style:italic">💡 ${kat.tipp}</div>`:''}
+      ${items}
+    </div>`;
+  }).join('')
+  +`<div style="margin-top:16px;display:flex;gap:8px">
+      <button class="btn-secondary" style="flex:1" onclick="grundstockAlleReset()">↺ Abhaken zurücksetzen</button>
+      <button class="btn-secondary" style="flex:1" onclick="grundstockNeuAnalyse()">🔄 Neu analysieren</button>
+    </div>`;
 }
 
 function grundstockToggle(key){
   if(_grundstockDone.has(key))_grundstockDone.delete(key);
   else _grundstockDone.add(key);
   localStorage.setItem('kb_grundstock_done',JSON.stringify([..._grundstockDone]));
-  grundstockAnalyse();
+  renderGrundstockKI();
 }
 
 function grundstockAlleReset(){
   _grundstockDone.clear();
   localStorage.setItem('kb_grundstock_done','[]');
+  renderGrundstockKI();
+}
+
+function grundstockNeuAnalyse(){
+  _grundstockKI=null;
+  localStorage.removeItem('kb_grundstock_ki');
   grundstockAnalyse();
 }
 

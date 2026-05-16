@@ -179,10 +179,17 @@
   <div class="login-box">
     <div class="login-logo">KüchenBasis</div>
     <div class="login-sub">was koche ich heute</div>
-    <input type="text" id="lu" placeholder="Benutzername" autocomplete="off"/>
-    <input type="password" id="lp" placeholder="Passwort"/>
-    <button class="btn-primary" onclick="doLogin()">Anmelden</button>
-    <div class="login-error" id="lerr">Falscher Benutzername oder Passwort</div>
+    <div id="login-step-email">
+      <input type="email" id="lemail" placeholder="E-Mail" autocomplete="email" inputmode="email"/>
+      <button class="btn-primary" id="btn-send-otp" onclick="sendOtp()">Code per E-Mail anfordern</button>
+    </div>
+    <div id="login-step-code" style="display:none">
+      <div id="lemail-shown" style="color:var(--text2);font-size:13px;margin-bottom:14px;line-height:1.5"></div>
+      <input type="text" id="lcode" placeholder="Code aus E-Mail" autocomplete="one-time-code" inputmode="numeric" maxlength="8"/>
+      <button class="btn-primary" id="btn-verify-otp" onclick="verifyOtp()">Einloggen</button>
+      <button class="btn-secondary" onclick="resetLogin()" style="width:100%;margin-top:10px">↺ Andere E-Mail</button>
+    </div>
+    <div class="login-error" id="lerr"></div>
   </div>
 </div>
 
@@ -651,18 +658,63 @@ let rFilters={protein:new Set(),familie:new Set(),kh:new Set(),extras:new Set()}
 
 function sync(s){const el=document.getElementById('sync');if(s==='ok'){el.textContent='✓ Synchronisiert';el.className='sync-ok';}else if(s==='err'){el.textContent='✗ Offline';el.className='sync-err';}else{el.textContent='⟳ Sync...';el.className='sync-loading';}}
 
-function doLogin(){
-  const u=document.getElementById('lu').value.trim().toLowerCase();
-  const p=document.getElementById('lp').value.trim();
-  if(u==='franke'&&p==='isernhagen2024'){
-    localStorage.setItem('kb_login','1');
+function showLoginError(msg){const e=document.getElementById('lerr');e.textContent=msg;e.style.display='block';}
+function hideLoginError(){document.getElementById('lerr').style.display='none';}
+
+async function sendOtp(){
+  const email=document.getElementById('lemail').value.trim().toLowerCase();
+  const btn=document.getElementById('btn-send-otp');
+  hideLoginError();
+  if(!email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){showLoginError('Bitte eine gültige E-Mail eingeben.');return;}
+  btn.disabled=true;btn.textContent='Sende Code…';
+  try{
+    const{error}=await db.auth.signInWithOtp({email,options:{shouldCreateUser:false}});
+    if(error)throw error;
+    document.getElementById('login-step-email').style.display='none';
+    document.getElementById('login-step-code').style.display='block';
+    document.getElementById('lemail-shown').textContent='Code wurde an '+email+' geschickt. Bitte in deiner Mailbox nachschauen (auch im Spam).';
+    document.getElementById('lcode').focus();
+  }catch(e){
+    showLoginError('Login fehlgeschlagen. Bitte E-Mail prüfen oder später erneut versuchen.');
+  }
+  btn.disabled=false;btn.textContent='Code per E-Mail anfordern';
+}
+
+async function verifyOtp(){
+  const email=document.getElementById('lemail').value.trim().toLowerCase();
+  const token=document.getElementById('lcode').value.trim();
+  const btn=document.getElementById('btn-verify-otp');
+  hideLoginError();
+  if(!token){showLoginError('Bitte den Code aus der E-Mail eingeben.');return;}
+  btn.disabled=true;btn.textContent='Prüfe…';
+  try{
+    const{error}=await db.auth.verifyOtp({email,token,type:'email'});
+    if(error)throw error;
     document.getElementById('login-screen').style.display='none';
     document.getElementById('app').style.display='block';
     init();
-  }else{document.getElementById('lerr').style.display='block';}
+  }catch(e){
+    showLoginError('Code ungültig oder abgelaufen. Bitte neuen Code anfordern.');
+  }
+  btn.disabled=false;btn.textContent='Einloggen';
 }
-function doLogout(){localStorage.removeItem('kb_login');document.getElementById('app').style.display='none';document.getElementById('login-screen').style.display='flex';}
-document.getElementById('lp').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+
+function resetLogin(){
+  document.getElementById('login-step-email').style.display='block';
+  document.getElementById('login-step-code').style.display='none';
+  document.getElementById('lcode').value='';
+  hideLoginError();
+}
+
+async function doLogout(){
+  try{await db.auth.signOut();}catch(e){}
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  resetLogin();
+}
+
+document.getElementById('lemail').addEventListener('keydown',e=>{if(e.key==='Enter')sendOtp();});
+document.getElementById('lcode').addEventListener('keydown',e=>{if(e.key==='Enter')verifyOtp();});
 
 async function init(){
   sync('loading');
@@ -1727,7 +1779,19 @@ document.getElementById('rez-modal').addEventListener('click',e=>{if(e.target===
 document.getElementById('man-modal').addEventListener('click',e=>{if(e.target===document.getElementById('man-modal'))closeModal('man-modal');});
 document.getElementById('settings-modal').addEventListener('click',e=>{if(e.target===document.getElementById('settings-modal'))closeModal('settings-modal');});
 
-if(localStorage.getItem('kb_login')==='1'){document.getElementById('login-screen').style.display='none';document.getElementById('app').style.display='block';init();}
+db.auth.getSession().then(({data:{session}})=>{
+  if(session){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    init();
+  }
+});
+db.auth.onAuthStateChange((event)=>{
+  if(event==='SIGNED_OUT'){
+    document.getElementById('app').style.display='none';
+    document.getElementById('login-screen').style.display='flex';
+  }
+});
 </script>
 </body>
 </html>

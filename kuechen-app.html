@@ -1313,7 +1313,7 @@ async function grundstockKIStarten(){
   });
   // Top-Zutaten als Text für die KI aufbereiten
   const zutatenliste=Object.values(map)
-    .sort((a,b)=>b.count-a.count).slice(0,150)
+    .sort((a,b)=>b.count-a.count).slice(0,80)
     .map(x=>{
       const pct=Math.round(x.count/total*100);
       const einh=Object.entries(x.mengen).sort((a,b)=>b[1].length-a[1].length);
@@ -1341,8 +1341,8 @@ ${bestand.length?bestand.map(b=>`${b.name}: ${b.qty} ${b.einheit||''} (Mindestbe
 
 Erstelle einen praxisnahen Vorratsplan für ~1 Monat (2 Erwachsene + 2 Kinder, ~20 Kochevents/Monat).
 Wenn etwas bereits im Bestand ist und ausreicht, markiere es im Tipp mit "✓ im Bestand" statt als Kaufempfehlung.
-Antworte NUR mit validem JSON, kein Markdown:
-{"kategorien":[{"name":"Einfrieren – Gemüse","emoji":"🥦","tipp":"kurzer Einfrierhinweis","items":[{"name":"Brokkoli","menge":"2 kg","tipp":"in Röschen blanchieren & einfrieren"}]}]}
+Antworte NUR mit validem JSON, kein Markdown. Tipps max. 5 Wörter, Mengen kompakt:
+{"kategorien":[{"name":"Einfrieren – Gemüse","emoji":"🥦","tipp":"Portionsweise blanchiert einfrieren","items":[{"name":"Brokkoli","menge":"2 kg","tipp":"Röschen, blanchiert"}]}]}
 
 Verwende diese Kategorien:
 1. "Einfrieren – Gemüse" 🥦
@@ -1355,10 +1355,11 @@ Verwende diese Kategorien:
 Nur sinnvolle Einträge je Kategorie. Mengen realistisch. Tipps kurz und praktisch. Alles auf Deutsch.`;
 
   try{
-    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:3000,messages:[{role:'user',content:prompt}]})});
+    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:6000,messages:[{role:'user',content:prompt}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
-    _grundstockKI=JSON.parse(text.replace(/```json|```/g,'').trim());
+    const raw=text.replace(/```json|```/g,'').trim();
+    _grundstockKI=JSON.parse(raw);
     saveSyncData('grundstock_ki',_grundstockKI);
     renderGrundstockKI(el);
   }catch(e){

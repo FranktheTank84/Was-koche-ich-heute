@@ -1252,7 +1252,13 @@ async function kiVorschlag(){
   prompt+='- Dessert nur wenn sinnvoll, nicht zwingend\n';
   prompt+='- Schlage 2-3 vollständige Mahlzeiten vor\n';
   prompt+='- Die Familie möchte insgesamt etwas leichter essen, aber ohne Verzicht — Lieblingsgerichte und Genuss haben Vorrang, wenn es nebenbei etwas ausgewogener sein kann umso besser, aber kein Muss\n\n';
-  if(protein.includes('unterwegs'))prompt+='UNTERWEGS-KONTEXT: Christian isst heute im Auto während der Fahrt. Bitte nur Gerichte vorschlagen die ohne Besteck essbar sind (Wraps, belegte Brote, Sandwiches, Finger Food, Snackboxen). Eine Kühlbox ist vorhanden — kühlpflichtige Sachen sind erlaubt. Besonders auf gesund und kalorienarm achten.\n\n';
+  if(protein.includes('unterwegs'))prompt+=`UNTERWEGS-REGELN (strikt beachten):
+- Christian isst WÄHREND DER FAHRT im Auto — eine Hand ist immer am Steuer
+- Alles muss zuhause FERTIG VORBEREITET sein bevor er ins Auto steigt — kein Belegen, kein Zusammenbauen unterwegs
+- Nur mit EINER HAND essbar: Wraps fest eingerollt in Folie, belegte Brötchen, Sandwiches, Finger Food
+- KEIN Salat der mit Gabel gegessen werden muss, KEINE Snackboxen die man selbst zusammenstellen muss
+- Kühlbox ist dabei — kühlpflichtige Sachen sind erlaubt
+- Alles in Frischhaltefolie oder Backpapier eingewickelt damit es im Auto nicht auseinanderfällt\n\n`;
 
   const personenDE={alle:'Christian & Yvonne (Alle)',christian:'Christian',yvonne:'Yvonne',friedi:'Friedi (Kind, wählerisch)',finn:'Finn (Kind)'};
   const personenListe=familie.length?familie.map(p=>personenDE[p]||p).join(', '):'Christian & Yvonne';
@@ -1265,10 +1271,10 @@ async function kiVorschlag(){
   if(zut)prompt+=`Besonders verfügbar im Bestand: ${zut}\n`;
   if(wunsch)prompt+=`Konkreter Wunsch / Lust auf: ${wunsch} — bitte unbedingt berücksichtigen\n`;
 
-  prompt+='\nFormat pro Vorschlag: Emoji+Name der Mahlzeit, welche Rezepte kombiniert werden, kurze Begründung, Gesamtkochzeit';
-  if(familie.includes('friedi')||familie.includes('alle'))prompt+=', ob Friedi es isst';
-  if(familie.includes('finn')||familie.includes('alle'))prompt+=', ob Finn es isst';
-  prompt+='. Auf Deutsch, locker.';
+  prompt+='\nFormat pro Vorschlag:\n- Emoji + Name\n- Welche Rezepte/Zutaten kombiniert werden\n- VOLLSTÄNDIGE Zubereitung Schritt für Schritt (keine Abkürzungen wie "wie gewohnt" — so beschreiben als ob jemand das Rezept zum ersten Mal macht)\n- Gesamtkochzeit\n- Kurze Begründung warum es passt';
+  if(familie.includes('friedi')||familie.includes('alle'))prompt+='\n- Ob Friedi es isst';
+  if(familie.includes('finn')||familie.includes('alle'))prompt+='\n- Ob Finn es isst';
+  prompt+='\nAuf Deutsch, klar und praktisch.';
 
   try{
     const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,messages:[{role:'user',content:prompt}]})});

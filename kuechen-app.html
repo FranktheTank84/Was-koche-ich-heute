@@ -334,8 +334,11 @@
           </div>
         </div>
         <div class="filter-group">
-          <div class="filter-label">Familie</div>
+          <div class="filter-label">Wer isst mit?</div>
           <div class="zutaten-chips">
+            <span class="chip" data-group="familie" data-val="alle" onclick="kiChip(this)">👨‍👩 Alle</span>
+            <span class="chip" data-group="familie" data-val="christian" onclick="kiChip(this)">👨 Christian</span>
+            <span class="chip" data-group="familie" data-val="yvonne" onclick="kiChip(this)">👩 Yvonne</span>
             <span class="chip" data-group="familie" data-val="friedi" onclick="kiChip(this)">👧 Friedi</span>
             <span class="chip" data-group="familie" data-val="finn" onclick="kiChip(this)">👦 Finn</span>
           </div>
@@ -1249,10 +1252,9 @@ async function kiVorschlag(){
   prompt+='- Die Familie möchte insgesamt etwas leichter essen, aber ohne Verzicht — Lieblingsgerichte und Genuss haben Vorrang, wenn es nebenbei etwas ausgewogener sein kann umso besser, aber kein Muss\n\n';
   if(protein.includes('unterwegs'))prompt+='UNTERWEGS-KONTEXT: Christian isst heute im Auto während der Fahrt. Bitte nur Gerichte vorschlagen die ohne Besteck essbar sind (Wraps, belegte Brote, Sandwiches, Finger Food, Snackboxen). Eine Kühlbox ist vorhanden — kühlpflichtige Sachen sind erlaubt. Besonders auf gesund und kalorienarm achten.\n\n';
 
-  prompt+='PERSONEN: Christian, Yvonne';
-  if(familie.includes('friedi'))prompt+=', Friedi (Kind, wählerisch)';
-  if(familie.includes('finn'))prompt+=', Finn (Kind)';
-  prompt+='.\n';
+  const personenDE={alle:'Christian & Yvonne (Alle)',christian:'Christian',yvonne:'Yvonne',friedi:'Friedi (Kind, wählerisch)',finn:'Finn (Kind)'};
+  const personenListe=familie.length?familie.map(p=>personenDE[p]||p).join(', '):'Christian & Yvonne';
+  prompt+=`PERSONEN: ${personenListe}\n`;
 
   if(protein.length)prompt+=`Gewünschter Typ: ${protein.map(p=>proteinMap[p]||p).join(', ')}\n`;
   if(kh.length)prompt+=`Gewünschte Beilage: ${kh.map(k=>khMap[k]||k).join(', ')}\n`;
@@ -1262,8 +1264,8 @@ async function kiVorschlag(){
   if(wunsch)prompt+=`Konkreter Wunsch / Lust auf: ${wunsch} — bitte unbedingt berücksichtigen\n`;
 
   prompt+='\nFormat pro Vorschlag: Emoji+Name der Mahlzeit, welche Rezepte kombiniert werden, kurze Begründung, Gesamtkochzeit';
-  if(familie.includes('friedi'))prompt+=', ob Friedi es isst';
-  if(familie.includes('finn'))prompt+=', ob Finn es isst';
+  if(familie.includes('friedi')||familie.includes('alle'))prompt+=', ob Friedi es isst';
+  if(familie.includes('finn')||familie.includes('alle'))prompt+=', ob Finn es isst';
   prompt+='. Auf Deutsch, locker.';
 
   try{

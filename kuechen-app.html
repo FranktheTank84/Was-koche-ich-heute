@@ -238,7 +238,10 @@
   </div>
 
   <div class="page content" id="page-rezepte">
-    <div class="section-title">Rezepte</div>
+    <div style="display:flex;align-items:baseline;justify-content:space-between">
+      <div class="section-title">Rezepte</div>
+      <div id="rez-count" style="font-size:13px;color:var(--text3)"></div>
+    </div>
     <div class="section-sub">Eure Sammlung</div>
     <input class="form-input" id="rez-search" placeholder="🔍 Zutat oder Rezeptname suchen…" oninput="renderR()" style="width:100%;margin-bottom:12px"/>
     <div class="filter-panel">
@@ -799,6 +802,8 @@ function renderR(){
   );
   if(rFilters.kh.size>0)f=f.filter(r=>rFilters.kh.has((r.kohlenhydrate||'').toLowerCase()));
   if(rFilters.extras.has('salat'))f=f.filter(r=>r.mit_salat);
+  const cEl=document.getElementById('rez-count');
+  if(cEl)cEl.textContent=f.length<rezepte.length?`${f.length} von ${rezepte.length} Rezepten`:`${rezepte.length} Rezept${rezepte.length===1?'':'e'}`;
   if(!f.length){list.innerHTML='<div class="empty-state"><div class="empty-icon">📖</div><div class="empty-text">Keine Rezepte gefunden.<br>Filter anpassen oder Rezept hinzufügen.</div></div>';return;}
   list.innerHTML=f.map(r=>{
     const kh=r.kohlenhydrate?`<span class="tag tag-kh">${{reis:'🍚 Reis',nudeln:'🍝 Nudeln',kartoffeln:'🥔 Kartoffeln',pommes:'🍟 Pommes',schupfnudeln:'🥟 Schupfnudeln',gnocchi:'🫙 Gnocchi',brot:'🍞 Brot'}[r.kohlenhydrate]||r.kohlenhydrate}</span>`:'';

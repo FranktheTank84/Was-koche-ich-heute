@@ -592,7 +592,7 @@ const AIHEADERS={'Content-Type':'application/json','Authorization':`Bearer ${SKE
 const {createClient}=supabase;
 const db=createClient(SURL,SKEY);
 
-let bestand=[],rezepte=[],einkauf=JSON.parse(localStorage.getItem('kb_einkauf')||'[]');
+let bestand=[],rezepte=[],einkauf=[];
 let bFilter='alle';
 let rFilters={protein:new Set(),familie:new Set(),kh:new Set(),extras:new Set()};
 
@@ -614,6 +614,10 @@ document.getElementById('lp').addEventListener('keydown',e=>{if(e.key==='Enter')
 async function init(){
   sync('loading');
   await Promise.all([loadB(),loadR()]);
+  // Sync-Daten laden (Einkaufsliste + Grundstock)
+  einkauf=await loadSyncData('einkauf',[]);
+  _grundstockKI=await loadSyncData('grundstock_ki',null);
+  _grundstockDone=new Set(await loadSyncData('grundstock_done',[]));
   renderAll();
   // Letzte aktive Seite wiederherstellen (z.B. nach Kamera-Reload)
   const navPages=['bestand','rezepte','ki','plan','einkauf'];
@@ -629,6 +633,12 @@ async function init(){
   }
   db.channel('b').on('postgres_changes',{event:'*',schema:'public',table:'bestand'},()=>loadB().then(renderB)).subscribe();
   db.channel('r').on('postgres_changes',{event:'*',schema:'public',table:'rezepte'},()=>loadR().then(renderR)).subscribe();
+  db.channel('s').on('postgres_changes',{event:'*',schema:'public',table:'sync_data'},payload=>{
+    const{key,data}=payload.new||{};
+    if(key==='einkauf'){einkauf=data||[];renderEinkauf();}
+    if(key==='grundstock_ki'){_grundstockKI=data;if(einkaufAktiv==='grundstock')renderGrundstockKI();}
+    if(key==='grundstock_done'){_grundstockDone=new Set(data||[]);if(einkaufAktiv==='grundstock')renderGrundstockKI();}
+  }).subscribe();
 }
 
 async function loadB(){
@@ -638,6 +648,15 @@ async function loadB(){
 async function loadR(){
   try{const{data,error}=await db.from('rezepte').select('*').order('created_at');if(error)throw error;rezepte=data||[];localStorage.setItem('kb_rc',JSON.stringify(rezepte));}
   catch(e){rezepte=JSON.parse(localStorage.getItem('kb_rc')||'[]');}
+}
+async function loadSyncData(key,fallback){
+  try{const{data}=await db.from('sync_data').select('data').eq('key',key).single();
+    return data?.data??fallback;}
+  catch(e){return fallback;}
+}
+async function saveSyncData(key,value){
+  try{await db.from('sync_data').upsert({key,data:value,updated_at:new Date().toISOString()},{onConflict:'key'});}
+  catch(e){console.error('Sync-Fehler',key,e);}
 }
 
 function toggleGroesse(){
@@ -697,11 +716,12 @@ function einkaufTab(tab,btn){
   document.getElementById('clear-done-btn').style.display=isGs?'none':'';
   if(isGs)grundstockAnalyse();else renderEinkauf();
 }
+function saveEinkauf(){saveSyncData('einkauf',einkauf);}
 function addToEinkauf(name,einheit,liste='woechentlich'){
-  if(!einkauf.find(e=>e.name===name)){einkauf.push({name,einheit,liste,done:false});localStorage.setItem('kb_einkauf',JSON.stringify(einkauf));renderEinkauf();}}
-function moveToWoche(i){einkauf[i].liste='woechentlich';localStorage.setItem('kb_einkauf',JSON.stringify(einkauf));renderEinkauf();}
-function toggleEinkauf(i){einkauf[i].done=!einkauf[i].done;localStorage.setItem('kb_einkauf',JSON.stringify(einkauf));renderEinkauf();}
-function clearDone(){einkauf=einkauf.filter(e=>!e.done);localStorage.setItem('kb_einkauf',JSON.stringify(einkauf));renderEinkauf();}
+  if(!einkauf.find(e=>e.name===name)){einkauf.push({name,einheit,liste,done:false});saveEinkauf();renderEinkauf();}}
+function moveToWoche(i){einkauf[i].liste='woechentlich';saveEinkauf();renderEinkauf();}
+function toggleEinkauf(i){einkauf[i].done=!einkauf[i].done;saveEinkauf();renderEinkauf();}
+function clearDone(){einkauf=einkauf.filter(e=>!e.done);saveEinkauf();renderEinkauf();}
 
 function renderAll(){renderB();renderR();renderKiZut();renderEinkauf();}
 
@@ -1252,8 +1272,8 @@ async function kiVorschlag(){
   }catch(e){result.innerHTML='<div class="ki-result" style="color:#c47a7a">Fehler.</div>';}
 }
 
-let _grundstockDone=new Set(JSON.parse(localStorage.getItem('kb_grundstock_done')||'[]'));
-let _grundstockKI=JSON.parse(localStorage.getItem('kb_grundstock_ki')||'null');
+let _grundstockDone=new Set();
+let _grundstockKI=null;
 
 function grundstockAnalyse(){
   const el=document.getElementById('grundstock-list');if(!el)return;
@@ -1339,7 +1359,7 @@ Nur sinnvolle Einträge je Kategorie. Mengen realistisch. Tipps kurz und praktis
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
     _grundstockKI=JSON.parse(text.replace(/```json|```/g,'').trim());
-    localStorage.setItem('kb_grundstock_ki',JSON.stringify(_grundstockKI));
+    saveSyncData('grundstock_ki',_grundstockKI);
     renderGrundstockKI(el);
   }catch(e){
     el.innerHTML=`<div style="color:#c47a7a;padding:12px;font-size:13px">Fehler: ${e?.message||e}</div>
@@ -1379,19 +1399,19 @@ function renderGrundstockKI(el){
 function grundstockToggle(key){
   if(_grundstockDone.has(key))_grundstockDone.delete(key);
   else _grundstockDone.add(key);
-  localStorage.setItem('kb_grundstock_done',JSON.stringify([..._grundstockDone]));
+  saveSyncData('grundstock_done',[..._grundstockDone]);
   renderGrundstockKI();
 }
 
 function grundstockAlleReset(){
   _grundstockDone.clear();
-  localStorage.setItem('kb_grundstock_done','[]');
+  saveSyncData('grundstock_done',[]);
   renderGrundstockKI();
 }
 
 function grundstockNeuAnalyse(){
   _grundstockKI=null;
-  localStorage.removeItem('kb_grundstock_ki');
+  saveSyncData('grundstock_ki',null);
   grundstockAnalyse();
 }
 

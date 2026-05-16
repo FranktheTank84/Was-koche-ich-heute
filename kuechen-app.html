@@ -1293,8 +1293,8 @@ function grundstockAnalyse(){
 async function grundstockKIStarten(){
   const el=document.getElementById('grundstock-list');if(!el)return;
   el.innerHTML='<div class="ki-loading"><div class="spinner"></div> KI analysiert eure '+rezepte.length+' Rezepte und baut den Vorratsplan…</div>';
-  // Zutatenhäufigkeit berechnen
   const total=rezepte.length;
+  // Zutatenhäufigkeit berechnen
   const map={};
   rezepte.forEach(r=>{
     if(!Array.isArray(r.zutaten))return;
@@ -1302,64 +1302,80 @@ async function grundstockKIStarten(){
     r.zutaten.forEach(z=>{
       const roh=(z.name||'').trim();if(!roh||roh.length<2)return;
       const key=roh.toLowerCase();
-      if(!map[key])map[key]={anzeige:roh,count:0,mengen:{}};
+      if(!map[key])map[key]={anzeige:roh,count:0};
       if(!gesehen.has(key)){map[key].count++;gesehen.add(key);}
-      if(z.menge&&z.einheit){
-        const u=(z.einheit||'').trim();
-        if(!map[key].mengen[u])map[key].mengen[u]=[];
-        map[key].mengen[u].push(parseFloat(z.menge)||0);
-      }
     });
   });
-  // Top-Zutaten als Text für die KI aufbereiten
+  // Nur Zutaten ab 8% Häufigkeit, max 60 Stück — skaliert automatisch mit Rezeptanzahl
   const zutatenliste=Object.values(map)
-    .sort((a,b)=>b.count-a.count).slice(0,80)
-    .map(x=>{
-      const pct=Math.round(x.count/total*100);
-      const einh=Object.entries(x.mengen).sort((a,b)=>b[1].length-a[1].length);
-      let mStr='';
-      if(einh.length){const[u,b]=einh[0];const avg=b.reduce((s,v)=>s+v,0)/b.length;mStr=` (Ø ${Math.round(avg)} ${u}/Rezept)`;}
-      return`${x.anzeige}: ${pct}%${mStr}`;
-    }).join('\n');
+    .filter(x=>x.count/total>=0.08)
+    .sort((a,b)=>b.count-a.count).slice(0,60)
+    .map(x=>`${x.anzeige} (${Math.round(x.count/total*100)}%)`).join(', ');
 
-  const prompt=`Du bist Küchenassistent für eine Familie die einen strukturierten Tiefkühl-Baukastensystem aufbauen möchte.
+  const bestandliste=bestand.length
+    ?bestand.map(b=>`${b.name} ${b.qty}${b.einheit?` ${b.einheit}`:''}`).join(', ')
+    :'nichts erfasst';
 
-HINTERGRUND:
-- Familie: Christian (Außendienst, isst unterwegs im Auto), Yvonne, 2 Kinder (Friedi, Finn)
-- Neuer Gefrierschrank + Vakuumierer geplant
-- Ziel: Gemüse, Fleisch, Fisch portionsweise einvakuumiert einfrieren
-- Soßen vorkochen und einfrieren
-- Pizzateig mit Soße vorbacken und einfrieren (nur noch belegen & fertig backen)
-- Baukasten-Prinzip: aus Vorräten flexibel kochen
-- Gesünder essen, gerne leichter — aber ohne Verzicht, Genuss hat Vorrang
+  // Kompaktes Zeilenformat statt JSON — robust, skaliert, nie abgeschnitten-Probleme
+  const prompt=`Du bist Küchenassistent. Familie: Christian (Außendienst), Yvonne, 2 Kinder.
+Gefrierschrank + Vakuumierer geplant. Ziel: Baukasten-Vorrat — Gemüse/Fleisch/Fisch portioniert einfrieren, Soßen vorkochen, Pizzateig vorbacken.
 
-ZUTATEN AUS ${total} REZEPTEN (Häufigkeit % aller Rezepte, Ø-Menge):
-${zutatenliste}
+HÄUFIGE ZUTATEN aus ${total} Rezepten: ${zutatenliste}
+BEREITS IM BESTAND: ${bestandliste}
 
-AKTUELLER BESTAND (bereits vorhanden — bitte berücksichtigen, nichts doppelt empfehlen):
-${bestand.length?bestand.map(b=>`${b.name}: ${b.qty} ${b.einheit||''} (Mindestbestand: ${b.min_qty||0})`).join('\n'):'Noch kein Bestand erfasst.'}
+Erstelle Vorratsplan für 1 Monat (4 Personen, ~20 Kochevents).
+Antworte NUR mit Zeilen im Format: KATEGORIE|NAME|MENGE|TIPP
+Eine Zeile pro Artikel, kein JSON, keine Erklärung, kein Markdown.
 
-Erstelle einen praxisnahen Vorratsplan für ~1 Monat (2 Erwachsene + 2 Kinder, ~20 Kochevents/Monat).
-Wenn etwas bereits im Bestand ist und ausreicht, markiere es im Tipp mit "✓ im Bestand" statt als Kaufempfehlung.
-Antworte NUR mit validem JSON, kein Markdown. Tipps max. 5 Wörter, Mengen kompakt:
-{"kategorien":[{"name":"Einfrieren – Gemüse","emoji":"🥦","tipp":"Portionsweise blanchiert einfrieren","items":[{"name":"Brokkoli","menge":"2 kg","tipp":"Röschen, blanchiert"}]}]}
+Kategorien (genau so schreiben):
+Einfrieren - Gemüse
+Einfrieren - Fleisch und Fisch
+Vorkochen und Einfrieren
+Trockenvorrat
+Gewuerze und Basics
+Kuehlschrank
 
-Verwende diese Kategorien:
-1. "Einfrieren – Gemüse" 🥦
-2. "Einfrieren – Fleisch & Fisch" 🍖
-3. "Vorkochen & Einfrieren" 🫙 (Soßen, Fonds, Pizzateig mit Soße, Suppen etc.)
-4. "Trockenvorrat & Konserven" 🌾
-5. "Gewürze, Öle & Basics" 🧂
-6. "Kühlschrank-Grundstock" 🧀
+Beispiel:
+Einfrieren - Gemüse|Brokkoli|2 kg|Röschen blanchieren
+Einfrieren - Fleisch und Fisch|Hähnchenbrust|3 kg|200g Portionen vakuumieren
+Vorkochen und Einfrieren|Bolognese|4 L|à 500ml einfrieren
+Trockenvorrat|Pasta|3 kg|verschiedene Sorten
+Gewuerze und Basics|Olivenöl|2 L|
+Kuehlschrank|Butter|500 g|
 
-Nur sinnvolle Einträge je Kategorie. Mengen realistisch. Tipps kurz und praktisch. Alles auf Deutsch.`;
+Was bereits ausreichend im Bestand ist weglassen oder mit Tipp "im Bestand". Nur sinnvolle Einträge.`;
 
   try{
-    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:6000,messages:[{role:'user',content:prompt}]})});
+    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:4000,messages:[{role:'user',content:prompt}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
-    const raw=text.replace(/```json|```/g,'').trim();
-    _grundstockKI=JSON.parse(raw);
+    // Zeilen parsen und in Kategorien gruppieren
+    const KAT_MAP={
+      'einfrieren - gemüse':{name:'Einfrieren – Gemüse',emoji:'🥦'},
+      'einfrieren - gemuse':{name:'Einfrieren – Gemüse',emoji:'🥦'},
+      'einfrieren - fleisch und fisch':{name:'Einfrieren – Fleisch & Fisch',emoji:'🍖'},
+      'vorkochen und einfrieren':{name:'Vorkochen & Einfrieren',emoji:'🫙'},
+      'trockenvorrat':{name:'Trockenvorrat & Konserven',emoji:'🌾'},
+      'gewuerze und basics':{name:'Gewürze, Öle & Basics',emoji:'🧂'},
+      'gewürze und basics':{name:'Gewürze, Öle & Basics',emoji:'🧂'},
+      'kuehlschrank':{name:'Kühlschrank-Grundstock',emoji:'🧀'},
+      'kühlschrank':{name:'Kühlschrank-Grundstock',emoji:'🧀'},
+    };
+    const katOrder=['einfrieren - gemüse','einfrieren - gemuse','einfrieren - fleisch und fisch','vorkochen und einfrieren','trockenvorrat','gewuerze und basics','gewürze und basics','kuehlschrank','kühlschrank'];
+    const gruppen={};
+    text.split('\n').forEach(zeile=>{
+      const parts=zeile.trim().split('|');
+      if(parts.length<2)return;
+      const katKey=(parts[0]||'').toLowerCase().trim();
+      const info=KAT_MAP[katKey];if(!info)return;
+      if(!gruppen[katKey])gruppen[katKey]={...info,items:[]};
+      gruppen[katKey].items.push({name:(parts[1]||'').trim(),menge:(parts[2]||'').trim(),tipp:(parts[3]||'').trim()});
+    });
+    const kategorien=katOrder.filter(k=>gruppen[k]).map(k=>gruppen[k]);
+    // Duplikate durch Alias-Keys entfernen
+    const seen=new Set();
+    const kategorienDedup=kategorien.filter(k=>{if(seen.has(k.name))return false;seen.add(k.name);return true;});
+    _grundstockKI={kategorien:kategorienDedup};
     saveSyncData('grundstock_ki',_grundstockKI);
     renderGrundstockKI(el);
   }catch(e){

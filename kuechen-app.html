@@ -378,6 +378,8 @@
       <div class="filter-label" style="margin-top:4px">Für wen?</div>
       <div class="zutaten-chips" style="margin-bottom:12px">
         <span class="chip selected" data-wk="person" data-val="familie" onclick="wkChip(this)">👨‍👩 Alle</span>
+        <span class="chip" data-wk="person" data-val="christian" onclick="wkChip(this)">👨 Christian</span>
+        <span class="chip" data-wk="person" data-val="yvonne" onclick="wkChip(this)">👩 Yvonne</span>
         <span class="chip" data-wk="person" data-val="friedi" onclick="wkChip(this)">👧 Friedi</span>
         <span class="chip" data-wk="person" data-val="finn" onclick="wkChip(this)">👦 Finn</span>
       </div>
@@ -1090,7 +1092,7 @@ async function kiWochenplan(){
   const desserts=rezepte.filter(r=>['dessert','kuchen'].includes(r.kategorie));
   const fruehstueck=rezepte.filter(r=>r.kategorie==='fruehstueck');
   const unterwegsRez=rezepte.filter(r=>r.kategorie==='unterwegs');
-  const PERSONEN_DE={familie:'Alle (Christian & Yvonne)',friedi:'Friedi (Kind, wählerisch)',finn:'Finn (Kind)'};
+  const PERSONEN_DE={familie:'Alle (Christian & Yvonne)',christian:'Christian (Erwachsener)',yvonne:'Yvonne (Erwachsene)',friedi:'Friedi (Kind, wählerisch)',finn:'Finn (Kind)'};
   const MAHLZEIT_DE={fruehstueck:'Frühstück',mittag:'Mittagessen',abendessen:'Abendessen',snack:'Snack',dessert:'Dessert',unterwegs:'Unterwegs'};
 
   let prompt=`Du bist Kochassistent. Erstelle einen Wochenplan (Montag bis Sonntag).\n\n`;
@@ -1129,7 +1131,7 @@ function renderWkPreview(plan,personen,mahlzeiten){
   const TAGE=['montag','dienstag','mittwoch','donnerstag','freitag','samstag','sonntag'];
   const TAGE_L=['Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag','Sonntag'];
   const ML={fruehstueck:'☀️ Frühstück',mittag:'🕛 Mittag',abendessen:'🌙 Abendessen',snack:'🍎 Snack',dessert:'🍮 Dessert',unterwegs:'🚗 Unterwegs'};
-  const PL={familie:'👨‍👩',friedi:'👧',finn:'👦'};
+  const PL={familie:'👨‍👩',christian:'👨',yvonne:'👩',friedi:'👧',finn:'👦'};
   return '<div class="wk-preview">'+TAGE.map((tag,i)=>{
     const day=plan[tag];if(!day)return'';
     const rows=mahlzeiten.map(m=>{

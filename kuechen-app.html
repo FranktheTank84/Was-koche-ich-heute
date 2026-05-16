@@ -1316,7 +1316,11 @@ HINTERGRUND:
 ZUTATEN AUS ${total} REZEPTEN (Häufigkeit % aller Rezepte, Ø-Menge):
 ${zutatenliste}
 
+AKTUELLER BESTAND (bereits vorhanden — bitte berücksichtigen, nichts doppelt empfehlen):
+${bestand.length?bestand.map(b=>`${b.name}: ${b.qty} ${b.einheit||''} (Mindestbestand: ${b.min_qty||0})`).join('\n'):'Noch kein Bestand erfasst.'}
+
 Erstelle einen praxisnahen Vorratsplan für ~1 Monat (2 Erwachsene + 2 Kinder, ~20 Kochevents/Monat).
+Wenn etwas bereits im Bestand ist und ausreicht, markiere es im Tipp mit "✓ im Bestand" statt als Kaufempfehlung.
 Antworte NUR mit validem JSON, kein Markdown:
 {"kategorien":[{"name":"Einfrieren – Gemüse","emoji":"🥦","tipp":"kurzer Einfrierhinweis","items":[{"name":"Brokkoli","menge":"2 kg","tipp":"in Röschen blanchieren & einfrieren"}]}]}
 

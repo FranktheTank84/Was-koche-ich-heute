@@ -424,9 +424,11 @@
     <div class="tabs" style="margin-bottom:12px">
       <button class="tab active" id="etab-woche" onclick="einkaufTab('woechentlich',this)">📅 Wöchentlich</button>
       <button class="tab" id="etab-metro" onclick="einkaufTab('metro',this)">🏪 Metro</button>
+      <button class="tab" id="etab-grundstock" onclick="einkaufTab('grundstock',this)">📦 Grundstock</button>
     </div>
-    <button class="btn-secondary" style="margin-bottom:16px;width:100%" onclick="clearDone()">✓ Erledigte entfernen</button>
+    <button class="btn-secondary" id="clear-done-btn" style="margin-bottom:16px;width:100%" onclick="clearDone()">✓ Erledigte entfernen</button>
     <div id="einkauf-list"></div>
+    <div id="grundstock-list" style="display:none"></div>
   </div>
 
   <nav class="bottom-nav">
@@ -685,7 +687,16 @@ async function delRez(id){
 }
 
 let einkaufAktiv='woechentlich';
-function einkaufTab(tab,btn){einkaufAktiv=tab;document.querySelectorAll('#page-einkauf .tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');renderEinkauf();}
+function einkaufTab(tab,btn){
+  einkaufAktiv=tab;
+  document.querySelectorAll('#page-einkauf .tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  const isGs=tab==='grundstock';
+  document.getElementById('einkauf-list').style.display=isGs?'none':'';
+  document.getElementById('grundstock-list').style.display=isGs?'':'none';
+  document.getElementById('clear-done-btn').style.display=isGs?'none':'';
+  if(isGs)grundstockAnalyse();else renderEinkauf();
+}
 function addToEinkauf(name,einheit,liste='woechentlich'){
   if(!einkauf.find(e=>e.name===name)){einkauf.push({name,einheit,liste,done:false});localStorage.setItem('kb_einkauf',JSON.stringify(einkauf));renderEinkauf();}}
 function moveToWoche(i){einkauf[i].liste='woechentlich';localStorage.setItem('kb_einkauf',JSON.stringify(einkauf));renderEinkauf();}
@@ -1239,6 +1250,86 @@ async function kiVorschlag(){
     const text=data.content?.map(c=>c.text||'').join('')||'';
     result.innerHTML=`<div class="ki-result" style="white-space:pre-wrap;line-height:1.6;font-size:14px">${text}</div>`;
   }catch(e){result.innerHTML='<div class="ki-result" style="color:#c47a7a">Fehler.</div>';}
+}
+
+let _grundstockDone=new Set(JSON.parse(localStorage.getItem('kb_grundstock_done')||'[]'));
+
+function grundstockAnalyse(){
+  const total=rezepte.length;
+  const el=document.getElementById('grundstock-list');
+  if(!el)return;
+  if(!total){el.innerHTML='<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">Noch keine Rezepte vorhanden.<br>Erst Rezepte hochladen!</div></div>';return;}
+  // Zutaten zählen
+  const map={};
+  rezepte.forEach(r=>{
+    if(!Array.isArray(r.zutaten))return;
+    const gesehen=new Set();
+    r.zutaten.forEach(z=>{
+      const roh=(z.name||'').trim();
+      if(!roh||roh.length<2)return;
+      const key=roh.toLowerCase();
+      if(!map[key])map[key]={anzeige:roh,count:0,mengen:{}};
+      if(!gesehen.has(key)){map[key].count++;gesehen.add(key);}
+      if(z.menge&&z.einheit){
+        const u=(z.einheit||'').toLowerCase().trim();
+        if(!map[key].mengen[u])map[key].mengen[u]=[];
+        map[key].mengen[u].push(parseFloat(z.menge)||0);
+      }
+    });
+  });
+  // Mindestens 20% Häufigkeit, nach Häufigkeit sortiert
+  const MONAT=20;
+  const items=Object.values(map)
+    .filter(x=>x.count/total>=0.20)
+    .sort((a,b)=>b.count-a.count)
+    .map(x=>{
+      const pct=Math.round(x.count/total*100);
+      let mengeText='';
+      const einheiten=Object.entries(x.mengen).sort((a,b)=>b[1].length-a[1].length);
+      if(einheiten.length){
+        const[u,betraege]=einheiten[0];
+        const avg=betraege.reduce((s,v)=>s+v,0)/betraege.length;
+        const monatlich=avg*(x.count/total)*MONAT;
+        if(monatlich>0.1){
+          let gerundet,einheit=u;
+          if(u==='g'&&monatlich>=900){gerundet=(Math.ceil(monatlich/100)/10).toFixed(1).replace('.0','');einheit='kg';}
+          else if(u==='ml'&&monatlich>=900){gerundet=(Math.ceil(monatlich/100)/10).toFixed(1).replace('.0','');einheit='l';}
+          else if(u==='g'||u==='ml')gerundet=Math.ceil(monatlich/10)*10;
+          else gerundet=Math.ceil(monatlich);
+          mengeText=`~${gerundet}${einheit?' '+einheit:''}/Monat`;
+        }
+      }
+      return{name:x.anzeige,pct,mengeText};
+    });
+  if(!items.length){el.innerHTML='<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">Noch zu wenige Rezepte für eine sinnvolle Analyse.</div></div>';return;}
+  el.innerHTML=`<div style="font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.5">Zutaten die in mind. 20% aller Rezepte vorkommen — mit geschätztem Monatsbedarf (Basis: ~${MONAT} Kochevents/Monat). Antippen zum Abhaken.</div>`
+    +items.map(item=>{
+      const done=_grundstockDone.has(item.name.toLowerCase());
+      return`<div class="einkauf-item" onclick="grundstockToggle('${item.name.toLowerCase().replace(/'/g,"\\'")}')" style="cursor:pointer;${done?'opacity:.5':''}">
+        <div style="font-size:20px;width:28px;flex-shrink:0;text-align:center">${done?'✅':'⬜'}</div>
+        <div style="flex:1">
+          <div style="font-weight:500;font-size:14px;${done?'text-decoration:line-through;color:var(--text3)':''}">${item.name}</div>
+          <div style="font-size:12px;color:var(--text3)">${item.pct}% der Rezepte${item.mengeText?' · '+item.mengeText:''}</div>
+        </div>
+      </div>`;
+    }).join('')
+    +`<div style="margin-top:16px;display:flex;gap:8px">
+        <button class="btn-secondary" style="flex:1" onclick="grundstockAlleReset()">↺ Alle zurücksetzen</button>
+        <button class="btn-secondary" style="flex:1" onclick="grundstockAnalyse()">🔄 Neu analysieren</button>
+      </div>`;
+}
+
+function grundstockToggle(key){
+  if(_grundstockDone.has(key))_grundstockDone.delete(key);
+  else _grundstockDone.add(key);
+  localStorage.setItem('kb_grundstock_done',JSON.stringify([..._grundstockDone]));
+  grundstockAnalyse();
+}
+
+function grundstockAlleReset(){
+  _grundstockDone.clear();
+  localStorage.setItem('kb_grundstock_done','[]');
+  grundstockAnalyse();
 }
 
 function renderEinkauf(){

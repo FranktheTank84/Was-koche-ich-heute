@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kuechenbasis-v13';
+const CACHE_NAME = 'kuechenbasis-v14';
 
 self.addEventListener('install', event => {
   event.waitUntil(

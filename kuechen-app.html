@@ -656,6 +656,20 @@ let bestand=[],rezepte=[],einkauf=[];
 let bFilter='alle';
 let rFilters={protein:new Set(),familie:new Set(),kh:new Set(),extras:new Set()};
 
+// ── XSS-Härtung: HTML-escapen + URL-Validierung ─────────────────────
+// esc(): macht <, >, &, ", ' unschädlich für innerHTML.
+// safeUrl(): lässt nur http(s)/mailto durch, blockt z. B. javascript:-URLs.
+function esc(v){
+  if(v==null)return'';
+  return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function safeUrl(u){
+  if(!u)return'#';
+  const s=String(u).trim();
+  if(/^(https?:|mailto:)/i.test(s))return esc(s);
+  return'#';
+}
+
 function sync(s){const el=document.getElementById('sync');if(s==='ok'){el.textContent='✓ Synchronisiert';el.className='sync-ok';}else if(s==='err'){el.textContent='✗ Offline';el.className='sync-err';}else{el.textContent='⟳ Sync...';el.className='sync-loading';}}
 
 function showLoginError(msg){const e=document.getElementById('lerr');e.textContent=msg;e.style.display='block';}
@@ -958,8 +972,8 @@ function renderB(){
   const low=bestand.filter(i=>i.qty<=i.min_qty&&i.qty>0);
   const expiring=bestand.filter(i=>{const m=mhdInfo(i.mhd);return m&&m.days<=7;});
   let warnHtml='';
-  if(low.length)warnHtml+=`<div class="warning-badge">⚠️ Bald leer: ${low.map(i=>i.name).join(', ')}</div>`;
-  if(expiring.length)warnHtml+=`<div class="mhd-warn-bar">🗓 MHD läuft ab: ${expiring.map(i=>{const m=mhdInfo(i.mhd);return`${i.name} (${m.days<0?'abgelaufen':m.days+'d'})`;}).join(', ')}</div>`;
+  if(low.length)warnHtml+=`<div class="warning-badge">⚠️ Bald leer: ${esc(low.map(i=>i.name).join(', '))}</div>`;
+  if(expiring.length)warnHtml+=`<div class="mhd-warn-bar">🗓 MHD läuft ab: ${esc(expiring.map(i=>{const m=mhdInfo(i.mhd);return`${i.name} (${m.days<0?'abgelaufen':m.days+'d'})`;}).join(', '))}</div>`;
   warn.innerHTML=warnHtml;
   if(!filtered.length){list.innerHTML='<div class="empty-state"><div class="empty-icon">📦</div><div class="empty-text">Noch nichts hier.<br>Artikel oben hinzufügen.</div></div>';return;}
   const g={kuehlschrank:[],gefrierschrank:[],vorrat:[]};
@@ -972,8 +986,8 @@ function renderB(){
     items.forEach(item=>{
       const c=item.qty<=item.min_qty?'qty-low':'qty-ok';
       const m=mhdInfo(item.mhd);
-      const mhdHtml=m?`<span class="mhd-badge ${m.cls}">${m.text}</span>`:'';
-      html+=`<div class="bestand-item"><div class="item-emoji">${item.emoji}</div><div class="item-info"><div class="item-name">${item.name}</div><div class="item-meta">${lb[item.ort]}</div>${mhdHtml}</div><div class="item-qty"><button class="qty-btn" onclick="changeQty(${item.id},-1)">−</button><span class="qty-num ${c}">${item.qty} <span style="font-size:11px;font-weight:400">${inflect(item.einheit,item.qty)}</span></span><button class="qty-btn" onclick="changeQty(${item.id},1)">+</button></div><button class="item-delete" onclick="delItem(${item.id})">🗑</button></div>`;
+      const mhdHtml=m?`<span class="mhd-badge ${m.cls}">${esc(m.text)}</span>`:'';
+      html+=`<div class="bestand-item"><div class="item-emoji">${esc(item.emoji)}</div><div class="item-info"><div class="item-name">${esc(item.name)}</div><div class="item-meta">${lb[item.ort]}</div>${mhdHtml}</div><div class="item-qty"><button class="qty-btn" onclick="changeQty(${item.id},-1)">−</button><span class="qty-num ${c}">${esc(item.qty)} <span style="font-size:11px;font-weight:400">${esc(inflect(item.einheit||'',item.qty))}</span></span><button class="qty-btn" onclick="changeQty(${item.id},1)">+</button></div><button class="item-delete" onclick="delItem(${item.id})">🗑</button></div>`;
     });
   }
   list.innerHTML=html;
@@ -1006,8 +1020,9 @@ function renderR(){
   if(cEl)cEl.textContent=f.length<rezepte.length?`${f.length} von ${rezepte.length} Rezepten`:`${rezepte.length} Rezept${rezepte.length===1?'':'e'}`;
   if(!f.length){list.innerHTML='<div class="empty-state"><div class="empty-icon">📖</div><div class="empty-text">Keine Rezepte gefunden.<br>Filter anpassen oder Rezept hinzufügen.</div></div>';return;}
   list.innerHTML=f.map(r=>{
-    const kh=r.kohlenhydrate?`<span class="tag tag-kh">${{reis:'🍚 Reis',nudeln:'🍝 Nudeln',kartoffeln:'🥔 Kartoffeln',pommes:'🍟 Pommes',schupfnudeln:'🥟 Schupfnudeln',gnocchi:'🫙 Gnocchi',brot:'🍞 Brot'}[r.kohlenhydrate]||r.kohlenhydrate}</span>`:'';
-    return`<div class="rezept-card" onclick="showRez(${r.id})"><div class="rezept-header"><div class="rezept-emoji">${r.emoji||'🍳'}</div><div class="rezept-info"><div class="rezept-name">${r.name}</div><div class="rezept-tags"><span class="tag ${katCls(r.kategorie)}">${katLabel(r.kategorie)}</span>${r.friedi?'<span class="tag tag-friedi">👧 Friedi</span>':''}${r.finn?'<span class="tag tag-finn">👦 Finn</span>':''}${kh}${r.mit_salat?'<span class="tag tag-salat">🥗 Salat</span>':''}${r.quelle?`<span class="tag">${r.quelle}</span>`:''}</div><div class="rezept-meta"><span>⏱ ${r.zeit||'?'}</span><span>👥 ${r.portionen||4} Port.</span></div></div></div></div>`;
+    const khMap={reis:'🍚 Reis',nudeln:'🍝 Nudeln',kartoffeln:'🥔 Kartoffeln',pommes:'🍟 Pommes',schupfnudeln:'🥟 Schupfnudeln',gnocchi:'🫙 Gnocchi',brot:'🍞 Brot'};
+    const kh=r.kohlenhydrate?`<span class="tag tag-kh">${esc(khMap[r.kohlenhydrate]||r.kohlenhydrate)}</span>`:'';
+    return`<div class="rezept-card" onclick="showRez(${r.id})"><div class="rezept-header"><div class="rezept-emoji">${esc(r.emoji||'🍳')}</div><div class="rezept-info"><div class="rezept-name">${esc(r.name)}</div><div class="rezept-tags"><span class="tag ${katCls(r.kategorie)}">${esc(katLabel(r.kategorie))}</span>${r.friedi?'<span class="tag tag-friedi">👧 Friedi</span>':''}${r.finn?'<span class="tag tag-finn">👦 Finn</span>':''}${kh}${r.mit_salat?'<span class="tag tag-salat">🥗 Salat</span>':''}${r.quelle?`<span class="tag">${esc(r.quelle)}</span>`:''}</div><div class="rezept-meta"><span>⏱ ${esc(r.zeit||'?')}</span><span>👥 ${esc(r.portionen||4)} Port.</span></div></div></div></div>`;
   }).join('');
 }
 
@@ -1016,16 +1031,17 @@ function showRez(id){
   r.cp=r.cp||r.portionen||4;
   const zut=Array.isArray(r.zutaten)?r.zutaten:[];
   const abb=zut.filter(z=>bestand.find(b=>b.name.toLowerCase().includes((z.name||'').toLowerCase().split(' ')[0])));
+  const khMapModal={reis:'🍚 Reis',nudeln:'🍝 Nudeln',kartoffeln:'🥔 Kartoffeln',pommes:'🍟 Pommes',schupfnudeln:'🥟 Schupfnudeln',gnocchi:'🫙 Gnocchi',brot:'🍞 Brot'};
   document.getElementById('rez-modal-c').innerHTML=`
     <button class="modal-close" onclick="closeModal('rez-modal')">✕</button>
-    <div class="modal-title">${r.emoji||'🍳'} ${r.name}</div>
+    <div class="modal-title">${esc(r.emoji||'🍳')} ${esc(r.name)}</div>
     <div style="clear:both;margin-bottom:8px"></div>
-    <div class="rezept-tags"><span class="tag ${katCls(r.kategorie)}">${katLabel(r.kategorie)}</span>${r.friedi?'<span class="tag tag-friedi">👧 Friedi</span>':''}${r.finn?'<span class="tag tag-finn">👦 Finn</span>':''}${r.kohlenhydrate&&r.kohlenhydrate!=='keins'?`<span class="tag tag-kh">${{reis:'🍚 Reis',nudeln:'🍝 Nudeln',kartoffeln:'🥔 Kartoffeln',pommes:'🍟 Pommes',schupfnudeln:'🥟 Schupfnudeln',gnocchi:'🫙 Gnocchi',brot:'🍞 Brot'}[r.kohlenhydrate]||r.kohlenhydrate}</span>`:''}${r.mit_salat?'<span class="tag tag-salat">🥗 Mit Salat</span>':''}</div>
-    <div class="portionen-row"><span class="portionen-label">Portionen anpassen</span><button class="qty-btn" onclick="chPort(${r.id},-1)">−</button><span class="qty-num" id="mp-${r.id}">${r.cp}</span><button class="qty-btn" onclick="chPort(${r.id},1)">+</button></div>
+    <div class="rezept-tags"><span class="tag ${katCls(r.kategorie)}">${esc(katLabel(r.kategorie))}</span>${r.friedi?'<span class="tag tag-friedi">👧 Friedi</span>':''}${r.finn?'<span class="tag tag-finn">👦 Finn</span>':''}${r.kohlenhydrate&&r.kohlenhydrate!=='keins'?`<span class="tag tag-kh">${esc(khMapModal[r.kohlenhydrate]||r.kohlenhydrate)}</span>`:''}${r.mit_salat?'<span class="tag tag-salat">🥗 Mit Salat</span>':''}</div>
+    <div class="portionen-row"><span class="portionen-label">Portionen anpassen</span><button class="qty-btn" onclick="chPort(${r.id},-1)">−</button><span class="qty-num" id="mp-${r.id}">${esc(r.cp)}</span><button class="qty-btn" onclick="chPort(${r.id},1)">+</button></div>
     <h3>Zutaten</h3><div class="zutaten-list" id="mz-${r.id}">${renderZut(r,r.cp)}</div>
-    ${zut.length?`<div class="abbuchen-box"><div class="abbuchen-title">📦 Bestand abbuchen beim Kochen</div>${abb.map(z=>`<div class="abbuchen-item"><span>${z.name}</span><span>−1 Stück</span></div>`).join('')||'<div style="font-size:13px;color:var(--text3)">Keine passenden Artikel im Bestand</div>'}${abb.length?`<button class="btn-add" style="width:100%;margin-top:12px" onclick="abbuchen(${r.id})">✓ Jetzt abbuchen</button>`:''}</div>`:''}
-    ${r.schritte&&r.schritte.length?`<h3>Zubereitung</h3><div class="schritte-list">${r.schritte.map((s,i)=>`<div class="schritt-row"><div class="schritt-num">${i+1}</div><div>${s}</div></div>`).join('')}</div>`:''}
-    ${r.url?`<div style="margin-top:16px"><a href="${r.url}" target="_blank" style="color:var(--accent);font-size:13px">🔗 Originalrezept öffnen</a></div>`:''}
+    ${zut.length?`<div class="abbuchen-box"><div class="abbuchen-title">📦 Bestand abbuchen beim Kochen</div>${abb.map(z=>`<div class="abbuchen-item"><span>${esc(z.name)}</span><span>−1 Stück</span></div>`).join('')||'<div style="font-size:13px;color:var(--text3)">Keine passenden Artikel im Bestand</div>'}${abb.length?`<button class="btn-add" style="width:100%;margin-top:12px" onclick="abbuchen(${r.id})">✓ Jetzt abbuchen</button>`:''}</div>`:''}
+    ${r.schritte&&r.schritte.length?`<h3>Zubereitung</h3><div class="schritte-list">${r.schritte.map((s,i)=>`<div class="schritt-row"><div class="schritt-num">${i+1}</div><div>${esc(s)}</div></div>`).join('')}</div>`:''}
+    ${r.url?`<div style="margin-top:16px"><a href="${safeUrl(r.url)}" target="_blank" rel="noopener noreferrer" style="color:var(--accent);font-size:13px">🔗 Originalrezept öffnen</a></div>`:''}
     <div class="form-row" style="margin-top:16px">
       <button class="btn-secondary" style="flex:1" onclick="editRez(${r.id})">✏️ Bearbeiten</button>
       <button class="btn-secondary" style="flex:1;color:#c47a7a;border-color:#5a3030" onclick="delRez(${r.id})">🗑 Löschen</button>
@@ -1036,7 +1052,7 @@ function showRez(id){
 function renderZut(r,p){
   const base=r.portionen||4,f=p/base;
   const zut=Array.isArray(r.zutaten)?r.zutaten:[];
-  return zut.map(z=>{const s=z.menge?`${Math.round(z.menge*f*10)/10} ${z.einheit||''}`.trim():(z.einheit||'');return`<div class="zutat-row"><span>${z.name}</span><span class="zutat-menge">${s}</span></div>`;}).join('')||'<div style="color:var(--text3);font-size:14px">Keine Zutaten eingetragen</div>';
+  return zut.map(z=>{const s=z.menge?`${Math.round(z.menge*f*10)/10} ${z.einheit||''}`.trim():(z.einheit||'');return`<div class="zutat-row"><span>${esc(z.name)}</span><span class="zutat-menge">${esc(s)}</span></div>`;}).join('')||'<div style="color:var(--text3);font-size:14px">Keine Zutaten eingetragen</div>';
 }
 
 function chPort(id,d){
@@ -1184,7 +1200,7 @@ async function rezFromFoto(event){
 let _pendingRez=null;
 function openConfirmRez(rez){
   _pendingRez=rez;
-  document.getElementById('confirm-preview').innerHTML=`<strong>${rez.emoji||'🍳'} ${rez.name}</strong><br><span style="color:var(--text3)">${katLabel(rez.kategorie)} · ⏱ ${rez.zeit||'?'} · 👥 ${rez.portionen||4} Port.</span>`;
+  document.getElementById('confirm-preview').innerHTML=`<strong>${esc(rez.emoji||'🍳')} ${esc(rez.name)}</strong><br><span style="color:var(--text3)">${esc(katLabel(rez.kategorie))} · ⏱ ${esc(rez.zeit||'?')} · 👥 ${esc(rez.portionen||4)} Port.</span>`;
   document.getElementById('c-friedi').checked=!!rez.friedi;
   document.getElementById('c-finn').checked=!!rez.finn;
   document.getElementById('c-salat').checked=!!rez.mit_salat;
@@ -1311,7 +1327,7 @@ async function kiWochenplan(){
     _kiPlan=plan; _kiPlanOffset=weekOffset;
     result.innerHTML=renderWkPreview(plan,personen,mahlzeiten)
       +`<div style="display:flex;gap:8px;margin-top:16px"><button class="btn-primary" style="flex:1" onclick="kiPlanUebernehmen()">✓ Alles übernehmen</button><button class="btn-secondary" style="flex:1" onclick="kiWochenplan()">↺ Neu</button></div>`;
-  }catch(e){result.innerHTML=`<div style="color:#c47a7a;font-size:13px;padding:12px">Fehler: ${e?.message||'Bitte nochmal versuchen.'}</div>`;}
+  }catch(e){result.innerHTML=`<div style="color:#c47a7a;font-size:13px;padding:12px">Fehler: ${esc(e?.message||'Bitte nochmal versuchen.')}</div>`;}
 }
 
 let _kiPlan=null, _kiPlanOffset=0;
@@ -1327,12 +1343,12 @@ function renderWkPreview(plan,personen,mahlzeiten){
       const slot=day[m];if(!slot)return'';
       const personRows=personen.map(p=>{
         const arr=slot[p];if(!arr||!arr.length)return'';
-        return`<div class="wk-meal-row"><span class="wk-meal-label">${ML[m]||m}</span><span class="wk-meal-person">${PL[p]||p}</span><span class="wk-meal-name">${arr.join(' + ')}</span><button class="plan-add-chip" style="font-size:11px;padding:2px 8px;margin-left:6px;flex-shrink:0" onclick="kiPlanEinzeln('${tag}','${m}','${p}')">+ übernehmen</button></div>`;
+        return`<div class="wk-meal-row"><span class="wk-meal-label">${esc(ML[m]||m)}</span><span class="wk-meal-person">${esc(PL[p]||p)}</span><span class="wk-meal-name">${esc(arr.join(' + '))}</span><button class="plan-add-chip" style="font-size:11px;padding:2px 8px;margin-left:6px;flex-shrink:0" onclick="kiPlanEinzeln('${esc(tag)}','${esc(m)}','${esc(p)}')">+ übernehmen</button></div>`;
       }).join('');
       return personRows;
     }).join('');
     if(!rows.trim())return'';
-    return`<div class="wk-day-block"><div class="wk-day-name" style="display:flex;justify-content:space-between;align-items:center">${TAGE_L[i]}<button class="plan-add-chip" style="font-size:11px;padding:2px 10px" onclick="kiPlanTagUebernehmen('${tag}')">+ Tag übernehmen</button></div>${rows}</div>`;
+    return`<div class="wk-day-block"><div class="wk-day-name" style="display:flex;justify-content:space-between;align-items:center">${esc(TAGE_L[i])}<button class="plan-add-chip" style="font-size:11px;padding:2px 10px" onclick="kiPlanTagUebernehmen('${esc(tag)}')">+ Tag übernehmen</button></div>${rows}</div>`;
   }).join('')+'</div>';
 }
 
@@ -1397,7 +1413,7 @@ async function kiPlanUebernehmen(){
 function renderKiZut(){
   const chips=document.getElementById('ki-zut');
   const u=[...new Set(bestand.map(i=>i.name))];
-  chips.innerHTML=u.map(n=>`<span class="chip" onclick="this.classList.toggle('selected')">${n}</span>`).join('');
+  chips.innerHTML=u.map(n=>`<span class="chip" onclick="this.classList.toggle('selected')">${esc(n)}</span>`).join('');
 }
 
 async function kiVorschlag(){
@@ -1469,7 +1485,7 @@ async function kiVorschlag(){
     const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:3500,messages:[{role:'user',content:prompt}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
-    result.innerHTML=`<div class="ki-result" style="white-space:pre-wrap;line-height:1.6;font-size:14px">${text}</div>`;
+    result.innerHTML=`<div class="ki-result" style="white-space:pre-wrap;line-height:1.6;font-size:14px">${esc(text)}</div>`;
   }catch(e){result.innerHTML='<div class="ki-result" style="color:#c47a7a">Fehler.</div>';}
 }
 
@@ -1580,7 +1596,7 @@ Was bereits ausreichend im Bestand ist weglassen oder mit Tipp "im Bestand". Nur
     saveSyncData('grundstock_ki',_grundstockKI);
     renderGrundstockKI(el);
   }catch(e){
-    el.innerHTML=`<div style="color:#c47a7a;padding:12px;font-size:13px">Fehler: ${e?.message||e}</div>
+    el.innerHTML=`<div style="color:#c47a7a;padding:12px;font-size:13px">Fehler: ${esc(e?.message||e)}</div>
       <button class="btn-secondary" style="margin-top:8px;width:100%" onclick="grundstockKIStarten()">↺ Nochmal versuchen</button>`;
   }
 }
@@ -1594,17 +1610,17 @@ function renderGrundstockKI(el){
       const key=(item.name||'').toLowerCase();
       const done=_grundstockDone.has(key);
       const sub=[item.menge,item.tipp].filter(Boolean).join(' · ');
-      return`<div class="einkauf-item" onclick="grundstockToggle('${key.replace(/'/g,"\\'")}')" style="cursor:pointer;${done?'opacity:.45':''}">
+      return`<div class="einkauf-item" onclick="grundstockToggle('${esc(key.replace(/'/g,"\\'"))}')" style="cursor:pointer;${done?'opacity:.45':''}">
         <div style="font-size:20px;width:28px;flex-shrink:0;text-align:center">${done?'✅':'⬜'}</div>
         <div style="flex:1">
-          <div style="font-weight:500;font-size:14px;${done?'text-decoration:line-through;color:var(--text3)':''}">  ${item.name}</div>
-          ${sub?`<div style="font-size:12px;color:var(--text3)">${sub}</div>`:''}
+          <div style="font-weight:500;font-size:14px;${done?'text-decoration:line-through;color:var(--text3)':''}">  ${esc(item.name)}</div>
+          ${sub?`<div style="font-size:12px;color:var(--text3)">${esc(sub)}</div>`:''}
         </div>
       </div>`;
     }).join('');
     return`<div style="margin-bottom:20px">
-      <div style="font-weight:700;font-size:15px;margin-bottom:${kat.tipp?'2px':'8px'}">${kat.emoji||''} ${kat.name}</div>
-      ${kat.tipp?`<div style="font-size:12px;color:var(--text3);margin-bottom:8px;font-style:italic">💡 ${kat.tipp}</div>`:''}
+      <div style="font-weight:700;font-size:15px;margin-bottom:${kat.tipp?'2px':'8px'}">${esc(kat.emoji||'')} ${esc(kat.name)}</div>
+      ${kat.tipp?`<div style="font-size:12px;color:var(--text3);margin-bottom:8px;font-style:italic">💡 ${esc(kat.tipp)}</div>`:''}
       ${items}
     </div>`;
   }).join('')
@@ -1639,8 +1655,8 @@ function renderEinkauf(){
   const sichtbar=einkauf.map((e,i)=>({...e,i})).filter(e=>e.liste===einkaufAktiv);
   if(!sichtbar.length){
     const leerText=einkaufAktiv==='metro'?'Keine Metro-Artikel fällig.':'Wochenliste ist leer.';
-    list.innerHTML=`<div class="empty-state"><div class="empty-icon">🛒</div><div class="empty-text">${leerText}<br>Wird automatisch befüllt wenn Bestand zu niedrig.</div></div>`;return;}
-  list.innerHTML=sichtbar.map(e=>`<div class="einkauf-item"><input type="checkbox" class="einkauf-check" ${e.done?'checked':''} onchange="toggleEinkauf(${e.i})"/><span class="einkauf-name ${e.done?'einkauf-done':''}">${e.name} <span style="color:var(--text3);font-size:12px">${e.einheit||''}</span></span>${e.liste==='metro'?`<button onclick="moveToWoche(${e.i})" style="margin-left:auto;font-size:11px;padding:3px 8px;border-radius:20px;border:1px solid var(--accent);color:var(--accent);background:none;cursor:pointer;white-space:nowrap">→ Woche</button>`:''}</div>`).join('');
+    list.innerHTML=`<div class="empty-state"><div class="empty-icon">🛒</div><div class="empty-text">${esc(leerText)}<br>Wird automatisch befüllt wenn Bestand zu niedrig.</div></div>`;return;}
+  list.innerHTML=sichtbar.map(e=>`<div class="einkauf-item"><input type="checkbox" class="einkauf-check" ${e.done?'checked':''} onchange="toggleEinkauf(${e.i})"/><span class="einkauf-name ${e.done?'einkauf-done':''}">${esc(e.name)} <span style="color:var(--text3);font-size:12px">${esc(e.einheit||'')}</span></span>${e.liste==='metro'?`<button onclick="moveToWoche(${e.i})" style="margin-left:auto;font-size:11px;padding:3px 8px;border-radius:20px;border:1px solid var(--accent);color:var(--accent);background:none;cursor:pointer;white-space:nowrap">→ Woche</button>`:''}</div>`).join('');
 }
 
 // ── Wochenplan ─────────────────────────────────────────────────────
@@ -1699,9 +1715,9 @@ function renderPlan(){
         const raw=slotData[p];
         const arr=Array.isArray(raw)?raw:(raw?[raw]:[]);
         const chips=arr.map((rez,ri)=>
-          `<span class="plan-rez-chip" onclick="planKochen('${key}','${tag}','${m}','${p}',${ri})" style="cursor:pointer" title="${rez.id?'Rezept öffnen':'Auf Chefkoch suchen'}"><span class="plan-chip-name">${rez.emoji||'🍳'} ${rez.name}${rez.id?'':' 🔍'}</span><button class="plan-chip-del" onclick="event.stopPropagation();planRemove('${key}','${tag}','${m}','${p}',${ri})">✕</button></span>`
+          `<span class="plan-rez-chip" onclick="planKochen('${esc(key)}','${esc(tag)}','${esc(m)}','${esc(p)}',${ri})" style="cursor:pointer" title="${rez.id?'Rezept öffnen':'Auf Chefkoch suchen'}"><span class="plan-chip-name">${esc(rez.emoji||'🍳')} ${esc(rez.name)}${rez.id?'':' 🔍'}</span><button class="plan-chip-del" onclick="event.stopPropagation();planRemove('${esc(key)}','${esc(tag)}','${esc(m)}','${esc(p)}',${ri})">✕</button></span>`
         ).join('');
-        return `<div class="plan-person-row"><span class="plan-person-label">${PERSONEN_L[p]}</span><div class="plan-rez-chips">${chips}<button class="plan-add-chip" onclick="planChoose('${key}','${tag}','${m}','${p}')">+</button></div></div>`;
+        return `<div class="plan-person-row"><span class="plan-person-label">${PERSONEN_L[p]}</span><div class="plan-rez-chips">${chips}<button class="plan-add-chip" onclick="planChoose('${esc(key)}','${esc(tag)}','${esc(m)}','${esc(p)}')">+</button></div></div>`;
       }).join('');
       return `<div class="plan-slot-group"><div class="plan-mahlzeit-header">${MAHLZEITEN_L[m]}</div>${personRows}</div>`;
     }).join('');
@@ -1730,7 +1746,7 @@ function renderPlanPicker(){
   const q=(document.getElementById('plan-search')?.value||'').toLowerCase();
   const filtered=rezepte.filter(r=>!q||r.name.toLowerCase().includes(q)||(r.kategorie||'').includes(q));
   document.getElementById('plan-picker-list').innerHTML=filtered.length
-    ?filtered.map(r=>`<div class="plan-picker-item" onclick="planSet(${r.id})"><span style="font-size:22px;flex-shrink:0">${r.emoji||'🍳'}</span><div><div style="font-weight:500;font-size:14px">${r.name}</div><div style="font-size:12px;color:var(--text3)">${katLabel(r.kategorie)} · ⏱ ${r.zeit||'?'}</div></div></div>`).join('')
+    ?filtered.map(r=>`<div class="plan-picker-item" onclick="planSet(${r.id})"><span style="font-size:22px;flex-shrink:0">${esc(r.emoji||'🍳')}</span><div><div style="font-weight:500;font-size:14px">${esc(r.name)}</div><div style="font-size:12px;color:var(--text3)">${esc(katLabel(r.kategorie))} · ⏱ ${esc(r.zeit||'?')}</div></div></div>`).join('')
     :'<div style="color:var(--text3);padding:16px;text-align:center;font-size:14px">Keine Rezepte gefunden</div>';
 }
 

@@ -648,7 +648,13 @@
 const SURL='https://hrvyecfyjwazslfxsouh.supabase.co';
 const SKEY='sb_publishable_kW5MDG_UcZi8IgAlUdwtFA_sbKApqe5';
 const AIURL=`${SURL}/functions/v1/ai-proxy`;
-const AIHEADERS={'Content-Type':'application/json','Authorization':`Bearer ${SKEY}`,'apikey':SKEY};
+// Headers für KI-Aufrufe: User-JWT statt Anon Key — schützt vor Kosten-Spam,
+// weil die Edge Function nur eingeloggte User durchlässt.
+async function aiHeaders(){
+  const{data:{session}}=await db.auth.getSession();
+  const token=session?.access_token||SKEY;
+  return{'Content-Type':'application/json','Authorization':`Bearer ${token}`,'apikey':SKEY};
+}
 const {createClient}=supabase;
 const db=createClient(SURL,SKEY);
 
@@ -812,7 +818,7 @@ async function bestandFromFoto(event){
   try{
     const b64=await resizeImage(file);
     document.getElementById('bestand-cam-in').value='';
-    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({
+    const resp=await fetch(AIURL,{method:'POST',headers:await aiHeaders(),body:JSON.stringify({
       model:'claude-sonnet-4-6',max_tokens:400,
       messages:[{role:'user',content:[
         {type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},
@@ -1090,7 +1096,7 @@ async function rezFromUrl(){
   const url=document.getElementById('rez-url').value.trim();if(!url)return;
   const btn=document.querySelector('[onclick="rezFromUrl()"]');btn.textContent='⏳...';btn.disabled=true;
   try{
-    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:`Extrahiere das Rezept von dieser URL: ${url}\n\nAntworte NUR mit JSON:\n{"name":"...","emoji":"...","kategorie":"fisch|rind|schwein|haehnchen|vegetarisch|vegan","zeit":"30 Min","portionen":4,"friedi":false,"finn":false,"kohlenhydrate":"nudeln|reis|kartoffeln|pommes|schupfnudeln|gnocchi|brot|keins","mit_salat":false,"zutaten":[{"name":"...","menge":500,"einheit":"g"}],"schritte":["Schritt 1"]}`}]})});
+    const resp=await fetch(AIURL,{method:'POST',headers:await aiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:`Extrahiere das Rezept von dieser URL: ${url}\n\nAntworte NUR mit JSON:\n{"name":"...","emoji":"...","kategorie":"fisch|rind|schwein|haehnchen|vegetarisch|vegan","zeit":"30 Min","portionen":4,"friedi":false,"finn":false,"kohlenhydrate":"nudeln|reis|kartoffeln|pommes|schupfnudeln|gnocchi|brot|keins","mit_salat":false,"zutaten":[{"name":"...","menge":500,"einheit":"g"}],"schritte":["Schritt 1"]}`}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
     const rez=JSON.parse(text.replace(/```json|```/g,'').trim());
@@ -1176,7 +1182,7 @@ async function rezFromFoto(event){
   try{
     const b64=await resizeImage(file);
     resetFotoInputs(); // jetzt erst zurücksetzen — Datei ist bereits im Speicher
-    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:'Lies das Rezept aus diesem Foto. Antworte NUR mit JSON:\n{"name":"...","emoji":"...","kategorie":"fisch|rind|schwein|haehnchen|vegetarisch|vegan|fruehstueck","zeit":"30 Min","portionen":4,"friedi":false,"finn":false,"kohlenhydrate":"nudeln|reis|kartoffeln|pommes|schupfnudeln|gnocchi|brot|keins","mit_salat":false,"zutaten":[{"name":"...","menge":500,"einheit":"g"}],"schritte":["Schritt 1"]}'}]}]})});
+    const resp=await fetch(AIURL,{method:'POST',headers:await aiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1500,messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:'image/jpeg',data:b64}},{type:'text',text:'Lies das Rezept aus diesem Foto. Antworte NUR mit JSON:\n{"name":"...","emoji":"...","kategorie":"fisch|rind|schwein|haehnchen|vegetarisch|vegan|fruehstueck","zeit":"30 Min","portionen":4,"friedi":false,"finn":false,"kohlenhydrate":"nudeln|reis|kartoffeln|pommes|schupfnudeln|gnocchi|brot|keins","mit_salat":false,"zutaten":[{"name":"...","menge":500,"einheit":"g"}],"schritte":["Schritt 1"]}'}]}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
     rez=JSON.parse(text.replace(/```json|```/g,'').trim());
@@ -1320,7 +1326,7 @@ async function kiWochenplan(){
 
   const weekOffset=woche==='naechste'?1:0;
   try{
-    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:4000,messages:[{role:'user',content:prompt}]})});
+    const resp=await fetch(AIURL,{method:'POST',headers:await aiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:4000,messages:[{role:'user',content:prompt}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
     const plan=JSON.parse(text.replace(/```json|```/g,'').trim());
@@ -1482,7 +1488,7 @@ async function kiVorschlag(){
   prompt+='\nAuf Deutsch, klar und praktisch.';
 
   try{
-    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:3500,messages:[{role:'user',content:prompt}]})});
+    const resp=await fetch(AIURL,{method:'POST',headers:await aiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:3500,messages:[{role:'user',content:prompt}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
     result.innerHTML=`<div class="ki-result" style="white-space:pre-wrap;line-height:1.6;font-size:14px">${esc(text)}</div>`;
@@ -1563,7 +1569,7 @@ Kuehlschrank|Butter|500 g|
 Was bereits ausreichend im Bestand ist weglassen oder mit Tipp "im Bestand". Nur sinnvolle Einträge.`;
 
   try{
-    const resp=await fetch(AIURL,{method:'POST',headers:AIHEADERS,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:4000,messages:[{role:'user',content:prompt}]})});
+    const resp=await fetch(AIURL,{method:'POST',headers:await aiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:4000,messages:[{role:'user',content:prompt}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
     // Zeilen parsen und in Kategorien gruppieren

@@ -1,0 +1,38 @@
+# --- Sensible / private Dateien — NIE nach GitHub ---
+
+# Session-Briefing (enthält altes Passwort und Familien-Details)
+BRIEFING.md
+
+# Sicherheits-Snapshots aus Claude-Sessions
+SECURITY-NOTES.md
+
+# Geheime Konfiguration (sollte später für FTP/Hoster genutzt werden)
+.env
+.env.local
+.env.*.local
+
+# Claude-Arbeitsverzeichnis (versehentlich angelegt — sollte gelöscht werden)
+.claude/
+
+# Lokaler Test-Server mit Path-Traversal-Lücke (Datei wird in einer nächsten Session gelöscht)
+server.js
+
+# --- Standard-Krempel, der nie versioniert werden sollte ---
+
+# Editor-/IDE-Artefakte
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Node (falls künftig genutzt)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build-Artefakte (falls künftig genutzt)
+dist/
+build/
+*.log

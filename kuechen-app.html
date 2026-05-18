@@ -1295,7 +1295,7 @@ async function kiWochenplan(){
   result.innerHTML='<div class="ki-loading"><div class="spinner"></div> KI plant eure Woche…</div>';
 
   // Rezeptliste kompakt halten — max 25 pro Kategorie damit der Prompt nicht zu groß wird
-  const cap=arr=>arr.slice(0,25).map(r=>r.name).join(', ')+(arr.length>25?` … +${arr.length-25} weitere`:'');
+  const cap=arr=>{const s=[...arr].sort(()=>Math.random()-0.5).slice(0,60);return s.map(r=>r.name).join(', ')+(arr.length>60?` … (zufällige Auswahl aus ${arr.length} Rezepten)`:'');};
   const hauptMap={'fisch':'Fisch','rind':'Rind','schwein':'Schwein','haehnchen':'Hähnchen','vegetarisch':'Vegetarisch','vegan':'Vegan'};
   const haupt=rezepte.filter(r=>hauptMap[r.kategorie]);
   const salate=rezepte.filter(r=>r.kategorie==='salat_rez');
@@ -1318,8 +1318,11 @@ async function kiWochenplan(){
   prompt+=`MAHLZEITEN: ${mahlzeiten.map(m=>MAHLZEIT_DE[m]).join(', ')}\n`;
   if(prefs.length)prompt+=`VORLIEBEN: ${prefs.join(', ')}\n`;
   if(wkWunsch)prompt+=`WUNSCH DIESE WOCHE: ${wkWunsch}\n`;
-  prompt+=`HINWEIS: Gesünder essen gewünscht, aber ohne Verzicht — Genuss hat Vorrang.\n`;
-  if(mahlzeiten.includes('unterwegs'))prompt+=`UNTERWEGS: Nur ohne Besteck essbar (Wraps, Sandwiches, Finger Food), Kühlbox vorhanden.\n`;
+  prompt+=`ESS-PHILOSOPHIE: Etwas gesünder, ausgewogener und kalorienbewusster — ABER ohne Verzicht. Normale Familienkost mit Genuss: Schnitzel, Pasta, Aufläufe, Pizza, Burger haben ihren Platz. Keine Diät-Vorschläge, keine reinen Rohkost-Mahlzeiten, kein "Selleriestange kauen". Den "leichter"-Dreh über die ZUBEREITUNG holen: weniger Sahne/Butter wo es nicht weh tut, mehr Gemüse als Beilage, Backofen statt Frittieren, schlankere Portionen — aber Geschmack und Sättigung kommen zuerst. Salat-basierte Hauptmahlzeiten sind ausdrücklich erlaubt (auch mit Baguette/Brot dazu) — Abwechslung über die Woche zählt.\n`;
+  prompt+=`ALLTAGSTAUGLICH: Montag bis Donnerstag jedes Gericht max. 30–60 Min Zubereitungszeit — wir müssen unter der Woche entlastet werden (Yvonne kocht oft alleine). Freitag bis Sonntag dürfen aufwendigere Rezepte sein.\n`;
+  prompt+=`SALAT-VORBEREITUNG (gegen tägliches Schnippeln): Wenn Salat als Beilage geplant ist, prüfe ob er für 2 Tage hält — dann gleich für beide Tage einplanen und am Folgetag wieder aufnehmen. Geeignet für 2 Tage: Kartoffelsalat, Linsensalat, Bohnensalat, Krautsalat, Nudelsalat, Couscous-Salat. NICHT für 2 Tage: Blattsalate, die zerfallen — die nur tagesfrisch.\n`;
+  prompt+=`RESTE-VERWERTUNG (gegen Foodwaste): Plane bewusst so, dass Beilagen-Reste (Kartoffeln, Reis, Nudeln) am Folgetag in neuer Form wiederverwendet werden — z.B. gekochte Kartoffeln → Bratkartoffeln, Reis → gebratener Reis, Nudeln → Nudelauflauf. Reste-Tag muss anders aussehen als der Vortag.\nGRENZE: Maximal 2 aufeinanderfolgende Tage die gleiche Hauptbeilage (Kartoffel/Reis/Nudel). Über die ganze Woche Kohlenhydrate gut rotieren.\n`;
+  if(mahlzeiten.includes('unterwegs'))prompt+=`UNTERWEGS: Mit der Hand essbar ohne Besteck (Wraps, Sandwiches, Finger Food), Kühlbox vorhanden. Christian sitzt viel — daher auch hier eher leicht denken: weniger fettige Beläge, mehr Gemüse rein, Vollkorn-Wrap statt Weißmehl wo's geht, schlanke Aufstriche. Als Snack/Begleitung gerne: Gurke, Tomate, Paprika, Weintrauben, Banane. AUF KEINEN FALL: Karottensticks, Kohlrabi oder rohes Knackgemüse — das essen wir nicht im Auto.\n`;
   prompt+=`\nAntworte NUR mit JSON, kein Markdown, keine Erklärung:\n`;
   prompt+=`{"montag":{"mittag":{"familie":["Gericht A","Beilage B"]},"abendessen":{"familie":["Gericht C"],"friedi":["Kindergericht"]}},"dienstag":{...},...}\n`;
   prompt+=`Regeln: Rezeptnamen exakt übernehmen wenn passend, sonst neue Ideen erfinden. Mehrere Array-Einträge für Kombinationen. Nur gewählte Personen/Mahlzeiten. Abwechslungsreich. Kinder bekommen kindgerechte Gerichte.`;

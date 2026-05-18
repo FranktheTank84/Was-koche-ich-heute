@@ -1344,7 +1344,7 @@ async function kiWochenplan(){
     const plan=JSON.parse(text.replace(/```json|```/g,'').trim());
     _kiPlan=plan; _kiPlanOffset=weekOffset;
     result.innerHTML=renderWkPreview(plan,personen,mahlzeiten)
-      +`<div style="display:flex;gap:8px;margin-top:16px"><button class="btn-primary" style="flex:1" onclick="kiPlanUebernehmen()">✓ Alles übernehmen</button><button class="btn-secondary" style="flex:1" onclick="kiWochenplan()">↺ Neu</button></div>`;
+      +`<div style="display:flex;flex-direction:column;gap:8px;margin-top:16px"><div style="display:flex;gap:8px"><button class="btn-primary" style="flex:1" onclick="kiPlanUebernehmen()">✓ Alles übernehmen</button><button class="btn-secondary" style="flex:1" onclick="kiWochenplan()">↺ Neu</button></div><button class="btn-secondary" style="width:100%" onclick="einkaufslisteAusPlan(this)">🛒 Einkaufsliste für diese Woche erstellen</button></div>`;
   }catch(e){result.innerHTML=`<div style="color:#c47a7a;font-size:13px;padding:12px">Fehler: ${esc(e?.message||'Bitte nochmal versuchen.')}</div>`;}
 }
 
@@ -1425,6 +1425,67 @@ async function kiPlanUebernehmen(){
   planWeekOffset=_kiPlanOffset;
   nav('plan',document.querySelectorAll('.nav-btn')[3]);
   planLoadAndRender();
+}
+
+async function einkaufslisteAusPlan(btn){
+  if(!_kiPlan){alert('Bitte zuerst Wochenplan generieren.');return;}
+  const origText=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.textContent='⏳ KI rechnet Einkaufsliste...';}
+  try{
+    // Alle Gerichte aus dem Plan einsammeln
+    const gerichte=new Set();
+    Object.values(_kiPlan).forEach(day=>{
+      Object.values(day||{}).forEach(slot=>{
+        Object.values(slot||{}).forEach(arr=>{(arr||[]).forEach(g=>g&&gerichte.add(g));});
+      });
+    });
+    // DB-Rezepte über Namens-Match (case-insensitive) verknüpfen
+    const namenLower=new Set([...gerichte].map(g=>(g||'').toLowerCase()));
+    const matched=rezepte.filter(r=>namenLower.has((r.name||'').toLowerCase()));
+    const rezListe=matched.length?matched.map(r=>{
+      const zut=Array.isArray(r.zutaten)?r.zutaten.map(z=>`${z.name||'?'}: ${z.menge||''}${z.einheit?' '+z.einheit:''}`.trim()).join(' | '):'(keine Zutaten erfasst)';
+      return `${r.name} (${r.portionen||4} Port.): ${zut}`;
+    }).join('\n'):'(keine DB-Rezepte gemappt — KI muss Zutaten selbst abschätzen)';
+    const bestandListe=bestand.length
+      ?bestand.map(b=>`${b.name}: ${b.qty}${b.einheit?' '+b.einheit:''}`).join('\n')
+      :'(Bestand leer — vermutlich gerade aus dem Urlaub zurück)';
+
+    let prompt=`Du bist Einkaufs-Helfer. Erstelle eine kompakte Einkaufsliste aus dem Wochenplan unten.\n\n`;
+    prompt+=`WOCHENPLAN (was wird wann gegessen):\n${JSON.stringify(_kiPlan)}\n\n`;
+    prompt+=`DB-REZEPTE MIT ZUTATEN (Mengen sind pro angegebene Portionen — auf 4 Personen hochrechnen falls nötig):\n${rezListe}\n\n`;
+    prompt+=`AKTUELLER BESTAND (DAVON ABZIEHEN was schon ausreichend da ist):\n${bestandListe}\n\n`;
+    prompt+=`FAMILIE: 4 Personen (Christian, Yvonne, Friedi, Finn).\n\n`;
+    prompt+=`REGELN:\n`;
+    prompt+=`- Alle Zutaten aus dem Wochenplan BÜNDELN — z.B. Hähnchen aus 3 Gerichten zu einem einzigen Listeneintrag mit Gesamtmenge zusammenfassen.\n`;
+    prompt+=`- Aktuellen Bestand abziehen — was ausreichend da ist gar nicht erst auf die Liste.\n`;
+    prompt+=`- Für Friedis Sondergerichte (Salami-Pizza, Schupfnudeln + Wiener Wurst, Spinat mit Ei + Mama-Pommes, Calzone mit Salami/Zwiebeln, Bratwurst Gmyrek + Mama-Pommes, Milchreis, Nudeln mit Mama-/Christian-Soße) die benötigten Zutaten ergänzen — markiere diese Einträge mit "(Friedi)" am Ende des Namens.\n`;
+    prompt+=`- Praktische Mengen-Angaben für 4 Personen (nicht "0,3 Knoblauchzehen" — sondern "1 Knolle Knoblauch").\n`;
+    prompt+=`- Vorrats-Basics (Salz, Pfeffer, Mehl, Zucker, Öl, Essig) nur auflisten wenn nicht im Bestand.\n`;
+    prompt+=`- Wenn ein Gericht-Name nicht in den DB-Rezepten zu finden ist (KI hat das Gericht erfunden), schätze die typischen Zutaten ab.\n\n`;
+    prompt+=`Antworte NUR mit JSON-Array, kein Markdown, keine Erklärung. Format pro Eintrag {"name":"...","einheit":"Menge mit Einheit"}:\n`;
+    prompt+=`[{"name":"Hähnchenbrust","einheit":"1,5 kg"},{"name":"Zwiebeln","einheit":"8 Stück"},{"name":"Salami (Friedi)","einheit":"200 g"}]`;
+
+    const resp=await fetch(AIURL,{method:'POST',headers:await aiHeaders(),body:JSON.stringify({
+      model:'claude-sonnet-4-6',max_tokens:8000,
+      messages:[{role:'user',content:prompt}]
+    })});
+    const data=await resp.json();
+    const text=data.content?.map(c=>c.text||'').join('')||'';
+    const items=JSON.parse(text.replace(/```json|```/g,'').trim());
+
+    let added=0,skipped=0;
+    items.forEach(it=>{
+      if(!it||!it.name)return;
+      if(einkauf.find(e=>(e.name||'').toLowerCase()===it.name.toLowerCase())){skipped++;}
+      else{einkauf.push({name:it.name,einheit:it.einheit||'',liste:'woechentlich',done:false});added++;}
+    });
+    saveEinkauf();renderEinkauf();
+    alert(`✓ ${added} Artikel zur Einkaufsliste hinzugefügt${skipped?` (${skipped} waren schon drauf)`:''}.\n\nDu findest die Liste unter 🛒 Einkauf → Wöchentlich.`);
+  }catch(e){
+    alert('Fehler beim Erstellen der Einkaufsliste:\n'+(e?.message||'Bitte nochmal versuchen.'));
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=origText;}
+  }
 }
 // ── Ende KI Wochenplan ──────────────────────────────────────────────
 

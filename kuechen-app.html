@@ -1338,7 +1338,7 @@ async function kiWochenplan(){
 
   const weekOffset=woche==='naechste'?1:0;
   try{
-    const resp=await fetch(AIURL,{method:'POST',headers:await aiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:4000,messages:[{role:'user',content:prompt}]})});
+    const resp=await fetch(AIURL,{method:'POST',headers:await aiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:12000,messages:[{role:'user',content:prompt}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
     const plan=JSON.parse(text.replace(/```json|```/g,'').trim());

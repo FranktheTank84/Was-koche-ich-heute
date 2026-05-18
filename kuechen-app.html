@@ -1332,7 +1332,8 @@ async function kiWochenplan(){
     prompt+=`REGEL FÜR FRIEDI: Schlage AUSSCHLIESSLICH Gerichte aus den oben genannten Listen vor. Erfinde für Friedi NIEMALS neue Gerichte. Wenn die Auswahl knapp wird, wiederhole obige Gerichte lieber mehrmals in der Woche statt etwas Neues zu erfinden.\n`;
   }
   prompt+=`\nAntworte NUR mit JSON, kein Markdown, keine Erklärung:\n`;
-  prompt+=`{"montag":{"mittag":{"familie":["Gericht A","Beilage B"]},"abendessen":{"familie":["Gericht C"],"friedi":["Kindergericht"]}},"dienstag":{...},...}\n`;
+  prompt+=`{"montag":{"mittag":{"familie":["Stulle mit Aufschnitt + Gurke"]},"abendessen":{"familie":["warmes Hauptgericht","Beilage"],"friedi":["Friedi-Gericht aus ihrer Liste"]},"unterwegs":{"familie":["Wrap mit Hähnchen + Gemüse"]}},"dienstag":{...},"mittwoch":{...},"donnerstag":{...},"freitag":{...},"samstag":{"abendessen":{"familie":["..."]}},"sonntag":{"abendessen":{"familie":["..."]}}}\n`;
+  prompt+=`SLOT-KEYS in JSON: Verwende für jede ausgewählte Mahlzeit den passenden Key — "fruehstueck", "mittag", "abendessen", "snack", "dessert", "unterwegs". Wenn "Unterwegs" als Mahlzeit ausgewählt ist (siehe MAHLZEITEN oben), MUSS für JEDEN Mo–Fr-Tag ein "unterwegs"-Slot mit konkreten Vorschlägen befüllt sein (am Wochenende NICHT). "Unterwegs" nie weglassen wenn ausgewählt!\n`;
   prompt+=`Regeln: Rezeptnamen exakt übernehmen wenn passend, sonst neue Ideen erfinden (außer für Friedi — dort NIEMALS neue Gerichte erfinden, siehe Friedi-Sonderregel). Mehrere Array-Einträge für Kombinationen. Nur gewählte Personen/Mahlzeiten. Abwechslungsreich. Kinder bekommen kindgerechte Gerichte. Alle persönlichen Einschränkungen (Linsen, Couscous) und Mahlzeiten-Rhythmus-Regeln (kein Mittagessen Sa/So, keine Unterwegs-Mahlzeit Sa/So) strikt einhalten.`;
 
   const weekOffset=woche==='naechste'?1:0;

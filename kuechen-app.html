@@ -1283,6 +1283,50 @@ function wkChipEinzel(el){
 }
 function wkSel(group){return[...document.querySelectorAll(`[data-wk="${group}"].selected`)].map(c=>c.dataset.val);}
 
+// Helper: Baut Rezept-Auflistung + alle Regelbloecke (PERSONEN, KUECHEN-AUSSTATTUNG,
+// ESS-PHILOSOPHIE, MAHLZEITEN-RHYTHMUS, ALLTAGSTAUGLICH, SALAT-VORBEREITUNG,
+// RESTE-VERWERTUNG, UNTERWEGS, FRIEDI) zusammen. Wird sowohl von kiWochenplan()
+// als auch von kiPlanTagRefresh() verwendet, damit die Regeln nicht doppelt
+// gepflegt werden muessen.
+function _buildPlanPromptKern(personen,mahlzeiten,prefs,wkWunsch){
+  const cap=arr=>{const s=[...arr].sort(()=>Math.random()-0.5).slice(0,60);return s.map(r=>r.name).join(', ')+(arr.length>60?` … (zufällige Auswahl aus ${arr.length} Rezepten)`:'');};
+  const hauptMap={'fisch':'Fisch','rind':'Rind','schwein':'Schwein','haehnchen':'Hähnchen','vegetarisch':'Vegetarisch','vegan':'Vegan'};
+  const haupt=rezepte.filter(r=>hauptMap[r.kategorie]);
+  const salate=rezepte.filter(r=>r.kategorie==='salat_rez');
+  const dressings=rezepte.filter(r=>r.kategorie==='dressing');
+  const desserts=rezepte.filter(r=>['dessert','kuchen'].includes(r.kategorie));
+  const fruehstueck=rezepte.filter(r=>r.kategorie==='fruehstueck');
+  const unterwegsRez=rezepte.filter(r=>r.kategorie==='unterwegs');
+  const PERSONEN_DE={familie:'Alle (Christian & Yvonne)',christian:'Christian (Erwachsener)',yvonne:'Yvonne (Erwachsene)',friedi:'Friedi (Kind, isst SEHR selektiv — siehe Sonderregel weiter unten)',finn:'Finn (Kind)'};
+  const MAHLZEIT_DE={fruehstueck:'Frühstück',mittag:'Mittagessen',abendessen:'Abendessen',snack:'Snack',dessert:'Dessert',unterwegs:'Unterwegs'};
+  let s=`UNSERE REZEPTE (Auswahl):\n`;
+  if(haupt.length)s+=`Hauptgerichte: ${cap(haupt)}\n`;
+  if(salate.length)s+=`Salate: ${cap(salate)}\n`;
+  if(dressings.length)s+=`Dressings: ${cap(dressings)}\n`;
+  if(desserts.length)s+=`Desserts: ${cap(desserts)}\n`;
+  if(fruehstueck.length)s+=`Frühstück: ${cap(fruehstueck)}\n`;
+  if(unterwegsRez.length)s+=`Unterwegs: ${cap(unterwegsRez)}\n`;
+  s+=`\nPERSONEN: ${personen.map(p=>PERSONEN_DE[p]).join(', ')}\n`;
+  s+=`MAHLZEITEN: ${mahlzeiten.map(m=>MAHLZEIT_DE[m]).join(', ')}\n`;
+  if(prefs.length)s+=`VORLIEBEN: ${prefs.join(', ')}\n`;
+  if(wkWunsch)s+=`WUNSCH DIESE WOCHE: ${wkWunsch}\n`;
+  s+=`KÜCHEN-AUSSTATTUNG (Rezepte bitte mit diesen Geräten denken):\nINDOOR (täglich verfügbar):\n- Philips Dual-Zone-Airfryer (große + kleine Schublade — zwei Sachen parallel garen, ideal Mo–Fr wenn Friedi etwas anderes als der Rest braucht).\n- Thermomix TM5 (Vorgänger-Generation vor TM6, kleines Touchdisplay) — wird NUR ALS HELFER eingesetzt, NICHT als Hauptkochgerät. Typische Einsätze: Soßen, Pesto, Mayo, Suppen pürieren, Teige, Hackfleisch zerkleinern, Sahne schlagen, Smoothies, Risotto. NICHT geeignet für: Sous-Vide, präzise Niedrigtemperaturen, Hochtemperatur-Anbraten >120°C, Slow-Cooking-Programme (TM6/TM7-Funktionen). Die warme Hauptmahlzeit landet immer auf Ceranfeld, Airfryer oder Backofen — der TM unterstützt nur dabei.\n- Wokpfanne (Indoor, fürs Ceranfeld).\n- Backofen (normaler Haushalts-Backofen).\n- Ceranfeld (kein Induktion, kein Gas).\nOUTDOOR (Wochenende/Sommer, wetterabhängig):\n- Enders Switchgrid Gasgrill: 4 Brenner, Backburner, Sizzlezone, Außenbrenner. Zubehör: Pizzastein, Plancha, gusseiserner Wok-Aufsatz, elektrischer Drehspieß. Outdoor-Rezepte (Pizza vom Stein, Drehspieß-Hähnchen, Plancha-Gemüse, Wok über Außenbrenner, Steaks auf Sizzlezone) primär Fr–So einplanen.\n`;
+  s+=`ESS-PHILOSOPHIE: Etwas gesünder, ausgewogener und kalorienbewusster — ABER ohne Verzicht. Normale Familienkost mit Genuss: Schnitzel, Pasta, Aufläufe, Pizza, Burger haben ihren Platz. Keine Diät-Vorschläge, keine reinen Rohkost-Mahlzeiten, kein "Selleriestange kauen". Den "leichter"-Dreh über die ZUBEREITUNG holen: weniger Sahne/Butter wo es nicht weh tut, mehr Gemüse als Beilage, Backofen statt Frittieren, schlankere Portionen — aber Geschmack und Sättigung kommen zuerst. Salat-basierte Hauptmahlzeiten sind ausdrücklich erlaubt (auch mit Baguette/Brot dazu) — Abwechslung über die Woche zählt.\n`;
+  s+=`PERSÖNLICHE EINSCHRÄNKUNGEN (sehr wichtig — IMMER beachten):\n- Christian mag KEINE Linsen — keine Linsen-Gerichte, kein Linsensalat, keine Linsensuppe etc. einplanen.\n- Yvonne verträgt KEINEN Couscous — kein Couscous-Gericht und kein Couscous-Salat einplanen.\n`;
+  s+=`MAHLZEITEN-RHYTHMUS:\n- Montag bis Freitag: drei Mahlzeiten — Frühstück, leichtes Mittagessen, warmes Abendessen.\n  * Mittagessen leicht und schnell: Stulle/Brot mit Belag, Wraps, Suppe, kleiner Salat, Aufschnitt, Sandwich, kalte Reste vom Vorabend. KEINE großen Kochaktionen mittags.\n  * Abendessen ist die warme Hauptmahlzeit des Tages.\n- Samstag und Sonntag: nur ZWEI Mahlzeiten — ein spätes Frühstück und ein Abendessen. KEIN Mittagessen am Wochenende. Lasse den "mittag"-Slot für Samstag und Sonntag in der JSON-Antwort einfach weg, auch wenn Mittagessen oben als Mahlzeit ausgewählt wurde.\nAusnahme: Falls Mittagessen die einzige ausgewählte Mahlzeit ist (kein Abendessen), behandle Mittag als warme Hauptmahlzeit.\n`;
+  s+=`ALLTAGSTAUGLICH: Montag bis Donnerstag jedes Gericht max. 30–60 Min Zubereitungszeit — wir müssen unter der Woche entlastet werden (Yvonne kocht oft alleine). Freitag bis Sonntag dürfen aufwendigere Rezepte sein.\n`;
+  s+=`SALAT-VORBEREITUNG (gegen tägliches Schnippeln): Wenn Salat als Beilage geplant ist, prüfe ob er für 2 Tage hält — dann gleich für beide Tage einplanen und am Folgetag wieder aufnehmen. Geeignet für 2 Tage: Kartoffelsalat, Bohnensalat, Krautsalat, Nudelsalat, Bulgur-Salat, Kichererbsen-Salat. NICHT für 2 Tage: Blattsalate, die zerfallen — die nur tagesfrisch.\n`;
+  s+=`RESTE-VERWERTUNG (gegen Foodwaste): Plane bewusst so, dass Beilagen-Reste (Kartoffeln, Reis, Nudeln) am Folgetag in neuer Form wiederverwendet werden — z.B. gekochte Kartoffeln → Bratkartoffeln, Reis → gebratener Reis, Nudeln → Nudelauflauf. Reste-Tag muss anders aussehen als der Vortag.\nGRENZE: Maximal 2 aufeinanderfolgende Tage die gleiche Hauptbeilage (Kartoffel/Reis/Nudel). Über die ganze Woche Kohlenhydrate gut rotieren.\n`;
+  if(mahlzeiten.includes('unterwegs'))s+=`UNTERWEGS-MAHLZEITEN — PFLICHT-REGEL: Wenn "Unterwegs" in MAHLZEITEN aufgeführt ist (siehe oben), MUSS in der JSON-Antwort für JEDEN Wochentag von Montag bis Freitag ein "unterwegs"-Slot mit konkreten Vorschlägen befüllt sein. Samstag und Sonntag KEIN "unterwegs"-Slot (Christian ist am Wochenende daheim, kein Außendienst).\nINHALT der Unterwegs-Mahlzeiten: Mit der Hand essbar ohne Besteck (Wraps, Sandwiches, Finger Food), Kühlbox vorhanden. Auch HAUPTGERICHTE mit Fingerfood-Charakter sind ausdrücklich erwünscht — Börek, Calzone, Pizzaschnecken, gefüllte Teigtaschen, Empanadas, herzhafte Muffins, Mini-Quiche, Bao-Buns, Frühlingsrollen. Schau gezielt in der Hauptgericht-Liste oben nach solchen Rezepten. Christian sitzt viel — eher leicht denken: weniger fettige Beläge, mehr Gemüse, Vollkorn-Wrap statt Weißmehl, schlanke Aufstriche.\nSNACK/BEGLEITUNG (optional dazu): Gemüse/Obst — Gurke, Tomate, Paprika, Weintrauben, Banane. Herzhaft — Aoste-Sticks, Käsewiener, Mini-Frikadellen, hartgekochte Eier, Käsewürfel, Mini-Salami. VERBOTEN: Karottensticks, Kohlrabi, rohes Knackgemüse.\n`;
+  if(personen.includes('friedi')){
+    const friediOK=rezepte.filter(r=>r.friedi).map(r=>r.name);
+    s+=`\nFRIEDI HAT BESONDERE BEDÜRFNISSE: Friedi ist Autistin mit sehr selektivem Essverhalten und isst NUR diese Dinge:\n- Spinat mit Ei und "Mama-Pommes" (Familien-Rezept)\n- Milchreis\n- Schupfnudeln mit Wiener Wurst (in Butter gebraten)\n- Nudeln mit "Mama-Soße" oder "Christian-Soße" (Familien-Rezepte)\n- Salami-Pizza\n- Calzone mit Salami und Zwiebeln\n- Bratwurst von Gmyrek mit "Mama-Pommes"\n- Rohkost: Gurke, Paprika\n- Obst: Apfel, Banane, Weintrauben, Erdbeeren, Wassermelone\n`;
+    if(friediOK.length)s+=`AUSSERDEM aus unserer Rezept-DB explizit als friedi-tauglich markiert: ${friediOK.join(', ')}\n`;
+    s+=`REGEL FÜR FRIEDI: Schlage AUSSCHLIESSLICH Gerichte aus den oben genannten Listen vor. Erfinde für Friedi NIEMALS neue Gerichte. Wenn die Auswahl knapp wird, wiederhole obige Gerichte lieber mehrmals in der Woche statt etwas Neues zu erfinden.\n`;
+  }
+  return s;
+}
+
 async function kiWochenplan(){
   const personen=wkSel('person');
   const mahlzeiten=wkSel('mahlzeit');
@@ -1294,44 +1338,8 @@ async function kiWochenplan(){
   if(!personen.length)return result.innerHTML='<div style="color:#c47a7a;font-size:13px">Bitte mindestens eine Person auswählen.</div>';
   result.innerHTML='<div class="ki-loading"><div class="spinner"></div> KI plant eure Woche…</div>';
 
-  // Rezeptliste kompakt halten — max 25 pro Kategorie damit der Prompt nicht zu groß wird
-  const cap=arr=>{const s=[...arr].sort(()=>Math.random()-0.5).slice(0,60);return s.map(r=>r.name).join(', ')+(arr.length>60?` … (zufällige Auswahl aus ${arr.length} Rezepten)`:'');};
-  const hauptMap={'fisch':'Fisch','rind':'Rind','schwein':'Schwein','haehnchen':'Hähnchen','vegetarisch':'Vegetarisch','vegan':'Vegan'};
-  const haupt=rezepte.filter(r=>hauptMap[r.kategorie]);
-  const salate=rezepte.filter(r=>r.kategorie==='salat_rez');
-  const dressings=rezepte.filter(r=>r.kategorie==='dressing');
-  const desserts=rezepte.filter(r=>['dessert','kuchen'].includes(r.kategorie));
-  const fruehstueck=rezepte.filter(r=>r.kategorie==='fruehstueck');
-  const unterwegsRez=rezepte.filter(r=>r.kategorie==='unterwegs');
-  const PERSONEN_DE={familie:'Alle (Christian & Yvonne)',christian:'Christian (Erwachsener)',yvonne:'Yvonne (Erwachsene)',friedi:'Friedi (Kind, isst SEHR selektiv — siehe Sonderregel weiter unten)',finn:'Finn (Kind)'};
-  const MAHLZEIT_DE={fruehstueck:'Frühstück',mittag:'Mittagessen',abendessen:'Abendessen',snack:'Snack',dessert:'Dessert',unterwegs:'Unterwegs'};
-
   let prompt=`Du bist Kochassistent. Erstelle einen Wochenplan (Montag bis Sonntag).\n\n`;
-  prompt+=`UNSERE REZEPTE (Auswahl):\n`;
-  if(haupt.length)prompt+=`Hauptgerichte: ${cap(haupt)}\n`;
-  if(salate.length)prompt+=`Salate: ${cap(salate)}\n`;
-  if(dressings.length)prompt+=`Dressings: ${cap(dressings)}\n`;
-  if(desserts.length)prompt+=`Desserts: ${cap(desserts)}\n`;
-  if(fruehstueck.length)prompt+=`Frühstück: ${cap(fruehstueck)}\n`;
-  if(unterwegsRez.length)prompt+=`Unterwegs: ${cap(unterwegsRez)}\n`;
-  prompt+=`\nPERSONEN: ${personen.map(p=>PERSONEN_DE[p]).join(', ')}\n`;
-  prompt+=`MAHLZEITEN: ${mahlzeiten.map(m=>MAHLZEIT_DE[m]).join(', ')}\n`;
-  if(prefs.length)prompt+=`VORLIEBEN: ${prefs.join(', ')}\n`;
-  if(wkWunsch)prompt+=`WUNSCH DIESE WOCHE: ${wkWunsch}\n`;
-  prompt+=`KÜCHEN-AUSSTATTUNG (Rezepte bitte mit diesen Geräten denken):\nINDOOR (täglich verfügbar):\n- Philips Dual-Zone-Airfryer (große + kleine Schublade — zwei Sachen parallel garen, ideal Mo–Fr wenn Friedi etwas anderes als der Rest braucht).\n- Thermomix TM5 (Vorgänger-Generation vor TM6, kleines Touchdisplay) — wird NUR ALS HELFER eingesetzt, NICHT als Hauptkochgerät. Typische Einsätze: Soßen, Pesto, Mayo, Suppen pürieren, Teige, Hackfleisch zerkleinern, Sahne schlagen, Smoothies, Risotto. NICHT geeignet für: Sous-Vide, präzise Niedrigtemperaturen, Hochtemperatur-Anbraten >120°C, Slow-Cooking-Programme (TM6/TM7-Funktionen). Die warme Hauptmahlzeit landet immer auf Ceranfeld, Airfryer oder Backofen — der TM unterstützt nur dabei.\n- Wokpfanne (Indoor, fürs Ceranfeld).\n- Backofen (normaler Haushalts-Backofen).\n- Ceranfeld (kein Induktion, kein Gas).\nOUTDOOR (Wochenende/Sommer, wetterabhängig):\n- Enders Switchgrid Gasgrill: 4 Brenner, Backburner, Sizzlezone, Außenbrenner. Zubehör: Pizzastein, Plancha, gusseiserner Wok-Aufsatz, elektrischer Drehspieß. Outdoor-Rezepte (Pizza vom Stein, Drehspieß-Hähnchen, Plancha-Gemüse, Wok über Außenbrenner, Steaks auf Sizzlezone) primär Fr–So einplanen.\n`;
-  prompt+=`ESS-PHILOSOPHIE: Etwas gesünder, ausgewogener und kalorienbewusster — ABER ohne Verzicht. Normale Familienkost mit Genuss: Schnitzel, Pasta, Aufläufe, Pizza, Burger haben ihren Platz. Keine Diät-Vorschläge, keine reinen Rohkost-Mahlzeiten, kein "Selleriestange kauen". Den "leichter"-Dreh über die ZUBEREITUNG holen: weniger Sahne/Butter wo es nicht weh tut, mehr Gemüse als Beilage, Backofen statt Frittieren, schlankere Portionen — aber Geschmack und Sättigung kommen zuerst. Salat-basierte Hauptmahlzeiten sind ausdrücklich erlaubt (auch mit Baguette/Brot dazu) — Abwechslung über die Woche zählt.\n`;
-  prompt+=`PERSÖNLICHE EINSCHRÄNKUNGEN (sehr wichtig — IMMER beachten):\n- Christian mag KEINE Linsen — keine Linsen-Gerichte, kein Linsensalat, keine Linsensuppe etc. einplanen.\n- Yvonne verträgt KEINEN Couscous — kein Couscous-Gericht und kein Couscous-Salat einplanen.\n`;
-  prompt+=`MAHLZEITEN-RHYTHMUS:\n- Montag bis Freitag: drei Mahlzeiten — Frühstück, leichtes Mittagessen, warmes Abendessen.\n  * Mittagessen leicht und schnell: Stulle/Brot mit Belag, Wraps, Suppe, kleiner Salat, Aufschnitt, Sandwich, kalte Reste vom Vorabend. KEINE großen Kochaktionen mittags.\n  * Abendessen ist die warme Hauptmahlzeit des Tages.\n- Samstag und Sonntag: nur ZWEI Mahlzeiten — ein spätes Frühstück und ein Abendessen. KEIN Mittagessen am Wochenende. Lasse den "mittag"-Slot für Samstag und Sonntag in der JSON-Antwort einfach weg, auch wenn Mittagessen oben als Mahlzeit ausgewählt wurde.\nAusnahme: Falls Mittagessen die einzige ausgewählte Mahlzeit ist (kein Abendessen), behandle Mittag als warme Hauptmahlzeit.\n`;
-  prompt+=`ALLTAGSTAUGLICH: Montag bis Donnerstag jedes Gericht max. 30–60 Min Zubereitungszeit — wir müssen unter der Woche entlastet werden (Yvonne kocht oft alleine). Freitag bis Sonntag dürfen aufwendigere Rezepte sein.\n`;
-  prompt+=`SALAT-VORBEREITUNG (gegen tägliches Schnippeln): Wenn Salat als Beilage geplant ist, prüfe ob er für 2 Tage hält — dann gleich für beide Tage einplanen und am Folgetag wieder aufnehmen. Geeignet für 2 Tage: Kartoffelsalat, Bohnensalat, Krautsalat, Nudelsalat, Bulgur-Salat, Kichererbsen-Salat. NICHT für 2 Tage: Blattsalate, die zerfallen — die nur tagesfrisch.\n`;
-  prompt+=`RESTE-VERWERTUNG (gegen Foodwaste): Plane bewusst so, dass Beilagen-Reste (Kartoffeln, Reis, Nudeln) am Folgetag in neuer Form wiederverwendet werden — z.B. gekochte Kartoffeln → Bratkartoffeln, Reis → gebratener Reis, Nudeln → Nudelauflauf. Reste-Tag muss anders aussehen als der Vortag.\nGRENZE: Maximal 2 aufeinanderfolgende Tage die gleiche Hauptbeilage (Kartoffel/Reis/Nudel). Über die ganze Woche Kohlenhydrate gut rotieren.\n`;
-  if(mahlzeiten.includes('unterwegs'))prompt+=`UNTERWEGS-MAHLZEITEN — PFLICHT-REGEL: Wenn "Unterwegs" in MAHLZEITEN aufgeführt ist (siehe oben), MUSS in der JSON-Antwort für JEDEN Wochentag von Montag bis Freitag ein "unterwegs"-Slot mit konkreten Vorschlägen befüllt sein. Samstag und Sonntag KEIN "unterwegs"-Slot (Christian ist am Wochenende daheim, kein Außendienst).\nINHALT der Unterwegs-Mahlzeiten: Mit der Hand essbar ohne Besteck (Wraps, Sandwiches, Finger Food), Kühlbox vorhanden. Auch HAUPTGERICHTE mit Fingerfood-Charakter sind ausdrücklich erwünscht — Börek, Calzone, Pizzaschnecken, gefüllte Teigtaschen, Empanadas, herzhafte Muffins, Mini-Quiche, Bao-Buns, Frühlingsrollen. Schau gezielt in der Hauptgericht-Liste oben nach solchen Rezepten. Christian sitzt viel — eher leicht denken: weniger fettige Beläge, mehr Gemüse, Vollkorn-Wrap statt Weißmehl, schlanke Aufstriche.\nSNACK/BEGLEITUNG (optional dazu): Gemüse/Obst — Gurke, Tomate, Paprika, Weintrauben, Banane. Herzhaft — Aoste-Sticks, Käsewiener, Mini-Frikadellen, hartgekochte Eier, Käsewürfel, Mini-Salami. VERBOTEN: Karottensticks, Kohlrabi, rohes Knackgemüse.\n`;
-  if(personen.includes('friedi')){
-    const friediOK=rezepte.filter(r=>r.friedi).map(r=>r.name);
-    prompt+=`\nFRIEDI HAT BESONDERE BEDÜRFNISSE: Friedi ist Autistin mit sehr selektivem Essverhalten und isst NUR diese Dinge:\n- Spinat mit Ei und "Mama-Pommes" (Familien-Rezept)\n- Milchreis\n- Schupfnudeln mit Wiener Wurst (in Butter gebraten)\n- Nudeln mit "Mama-Soße" oder "Christian-Soße" (Familien-Rezepte)\n- Salami-Pizza\n- Calzone mit Salami und Zwiebeln\n- Bratwurst von Gmyrek mit "Mama-Pommes"\n- Rohkost: Gurke, Paprika\n- Obst: Apfel, Banane, Weintrauben, Erdbeeren, Wassermelone\n`;
-    if(friediOK.length)prompt+=`AUSSERDEM aus unserer Rezept-DB explizit als friedi-tauglich markiert: ${friediOK.join(', ')}\n`;
-    prompt+=`REGEL FÜR FRIEDI: Schlage AUSSCHLIESSLICH Gerichte aus den oben genannten Listen vor. Erfinde für Friedi NIEMALS neue Gerichte. Wenn die Auswahl knapp wird, wiederhole obige Gerichte lieber mehrmals in der Woche statt etwas Neues zu erfinden.\n`;
-  }
+  prompt+=_buildPlanPromptKern(personen,mahlzeiten,prefs,wkWunsch);
   prompt+=`\nAntworte NUR mit JSON, kein Markdown, keine Erklärung:\n`;
   prompt+=`{"montag":{"mittag":{"familie":["Stulle mit Aufschnitt + Gurke"]},"abendessen":{"familie":["warmes Hauptgericht","Beilage"],"friedi":["Friedi-Gericht aus ihrer Liste"]},"unterwegs":{"familie":["Wrap mit Hähnchen + Gemüse"]}},"dienstag":{...},"mittwoch":{...},"donnerstag":{...},"freitag":{...},"samstag":{"abendessen":{"familie":["..."]}},"sonntag":{"abendessen":{"familie":["..."]}}}\n`;
   prompt+=`SLOT-KEYS in JSON: Verwende für jede ausgewählte Mahlzeit den passenden Key — "fruehstueck", "mittag", "abendessen", "snack", "dessert", "unterwegs". Wenn "Unterwegs" als Mahlzeit ausgewählt ist (siehe MAHLZEITEN oben), MUSS für JEDEN Mo–Fr-Tag ein "unterwegs"-Slot mit konkreten Vorschlägen befüllt sein (am Wochenende NICHT). "Unterwegs" nie weglassen wenn ausgewählt!\n`;
@@ -1367,7 +1375,7 @@ function renderWkPreview(plan,personen,mahlzeiten){
       return personRows;
     }).join('');
     if(!rows.trim())return'';
-    return`<div class="wk-day-block"><div class="wk-day-name" style="display:flex;justify-content:space-between;align-items:center">${esc(TAGE_L[i])}<button class="plan-add-chip" style="font-size:11px;padding:2px 10px" onclick="kiPlanTagUebernehmen('${esc(tag)}')">+ Tag übernehmen</button></div>${rows}</div>`;
+    return`<div class="wk-day-block"><div class="wk-day-name" style="display:flex;justify-content:space-between;align-items:center;gap:6px">${esc(TAGE_L[i])}<div style="display:flex;gap:6px"><button class="plan-add-chip" style="font-size:11px;padding:2px 10px" onclick="kiPlanTagRefresh('${esc(tag)}',this)" title="Nur diesen Tag neu generieren">↻ Tag neu</button><button class="plan-add-chip" style="font-size:11px;padding:2px 10px" onclick="kiPlanTagUebernehmen('${esc(tag)}')">+ Tag übernehmen</button></div></div>${rows}</div>`;
   }).join('')+'</div>';
 }
 
@@ -1494,6 +1502,55 @@ async function einkaufslisteAusPlan(btn){
   }catch(e){
     alert('Fehler beim Erstellen der Einkaufsliste:\n'+(e?.message||'Bitte nochmal versuchen.'));
   }finally{
+    if(btn){btn.disabled=false;btn.textContent=origText;}
+  }
+}
+
+async function kiPlanTagRefresh(tag,btn){
+  if(!_kiPlan){alert('Bitte zuerst Wochenplan generieren.');return;}
+  const personen=wkSel('person');
+  const mahlzeiten=wkSel('mahlzeit');
+  const prefs=wkSel('pref');
+  const wkWunsch=(document.getElementById('wk-wunsch')?.value||'').trim();
+  if(!personen.length||!mahlzeiten.length){alert('Personen-/Mahlzeiten-Auswahl fehlt. Bitte den ganzen Wochenplan neu generieren.');return;}
+  const origText=btn?btn.textContent:'';
+  if(btn){btn.disabled=true;btn.textContent='⏳';}
+  try{
+    const TAGE_L={montag:'Montag',dienstag:'Dienstag',mittwoch:'Mittwoch',donnerstag:'Donnerstag',freitag:'Freitag',samstag:'Samstag',sonntag:'Sonntag'};
+    const tagLabel=TAGE_L[tag]||tag;
+    // Kontext der anderen Tage
+    const TAGE_KEYS=['montag','dienstag','mittwoch','donnerstag','freitag','samstag','sonntag'];
+    const kontextLines=TAGE_KEYS.filter(t=>t!==tag).map(t=>{
+      const day=_kiPlan[t];if(!day)return `${TAGE_L[t]}: (leer)`;
+      const slotLines=Object.entries(day).map(([m,pers])=>{
+        const gerichte=Object.values(pers||{}).flat().filter(Boolean).join(', ');
+        return `  ${m}: ${gerichte}`;
+      }).join('\n');
+      return `${TAGE_L[t]}:\n${slotLines}`;
+    }).join('\n');
+
+    let prompt=`Du bist Kochassistent. Generiere einen NEUEN Vorschlag NUR für ${tagLabel}. Die anderen Tage der Woche sind unten als Kontext gegeben — du sollst sie NICHT ändern, sondern nur für ${tagLabel} eine andere Variante vorschlagen.\n\n`;
+    prompt+=_buildPlanPromptKern(personen,mahlzeiten,prefs,wkWunsch);
+    prompt+=`\nAKTUELLER PLAN DER ANDEREN TAGE (Kontext für Abwechslung und Reste-Verwertung — nicht ändern):\n${kontextLines}\n`;
+    prompt+=`\nWICHTIG: Schlage für ${tagLabel} eine ANDERE Auswahl vor als bisher (nicht dieselben Gerichte wie der vorherige Vorschlag). Berücksichtige weiter ALLE Regeln (Friedi, Mahlzeiten-Rhythmus, Linsen/Couscous-Tabu, Foodwaste, Unterwegs-Mo-Fr etc.).\n`;
+    prompt+=`\nAntworte NUR mit JSON für diesen einen Tag (KEIN Tagesname als Schlüssel drumherum, KEIN Markdown). Beispiel-Struktur:\n`;
+    prompt+=`{"mittag":{"familie":["leichtes Mittagsgericht"]},"abendessen":{"familie":["warmes Hauptgericht","Beilage"],"friedi":["Friedi-Gericht aus ihrer Liste"]},"unterwegs":{"familie":["Wrap o.ä."]}}\n`;
+    prompt+=`SLOT-KEYS: "fruehstueck", "mittag", "abendessen", "snack", "dessert", "unterwegs". Wochenendregeln beachten (Sa/So kein "mittag", kein "unterwegs").\nPFLICHT-CHECK: Alle in MAHLZEITEN gewählten Slots müssen für diesen Tag befüllt sein (außer Sa/So-Ausnahmen).`;
+
+    const resp=await fetch(AIURL,{method:'POST',headers:await aiHeaders(),body:JSON.stringify({
+      model:'claude-sonnet-4-6',max_tokens:3000,
+      messages:[{role:'user',content:prompt}]
+    })});
+    const data=await resp.json();
+    const text=data.content?.map(c=>c.text||'').join('')||'';
+    const tagPlan=JSON.parse(text.replace(/```json|```/g,'').trim());
+    _kiPlan[tag]=tagPlan;
+    // Vorschau neu rendern (Button-References werden ungueltig, ist OK)
+    const result=document.getElementById('ki-woche-result');
+    result.innerHTML=renderWkPreview(_kiPlan,personen,mahlzeiten)
+      +`<div style="display:flex;flex-direction:column;gap:8px;margin-top:16px"><div style="display:flex;gap:8px"><button class="btn-primary" style="flex:1" onclick="kiPlanUebernehmen()">✓ Alles übernehmen</button><button class="btn-secondary" style="flex:1" onclick="kiWochenplan()">↺ Neu</button></div><button class="btn-secondary" style="width:100%" onclick="einkaufslisteAusPlan(this)">🛒 Einkaufsliste für diese Woche erstellen</button></div>`;
+  }catch(e){
+    alert(`Fehler beim Tag-Refresh für ${tag}: ${e?.message||'Bitte nochmal versuchen.'}`);
     if(btn){btn.disabled=false;btn.textContent=origText;}
   }
 }

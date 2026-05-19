@@ -1373,8 +1373,17 @@ function renderWkPreview(plan,personen,mahlzeiten){
 
 function kiNamenZuChips(namen){
   const arr=Array.isArray(namen)?namen:[namen];
+  const norm=s=>(s||'').toLowerCase().replace(/[-–—]/g,' ').replace(/\s+/g,' ').trim();
   return arr.map(name=>{
-    const found=rezepte.find(r=>r.name.toLowerCase()===name.toLowerCase())||rezepte.find(r=>name.toLowerCase().includes(r.name.toLowerCase().split(' ')[0]));
+    const lower=(name||'').toLowerCase();
+    const normName=norm(name);
+    // 1. Exakter Match (case-insensitive)
+    let found=rezepte.find(r=>(r.name||'').toLowerCase()===lower);
+    // 2. Normalisierter Match (Bindestriche/Spaces angeglichen)
+    if(!found)found=rezepte.find(r=>norm(r.name)===normName);
+    // 3. Strenger Substring-Match: Rezeptname muss komplett im KI-Namen drin sein,
+    //    und mindestens 8 Zeichen lang, damit kurze Wörter wie "Wiener" nicht versehentlich matchen
+    if(!found)found=rezepte.find(r=>r.name&&r.name.length>=8&&normName.includes(norm(r.name)));
     return found?{id:found.id,name:found.name,emoji:found.emoji||'🍳'}:{name,emoji:'🍳'};
   });
 }
@@ -1825,10 +1834,18 @@ function planChoose(key,tag,mahlzeit,person='familie'){
 
 function renderPlanPicker(){
   const q=(document.getElementById('plan-search')?.value||'').toLowerCase();
-  const filtered=rezepte.filter(r=>!q||r.name.toLowerCase().includes(q)||(r.kategorie||'').includes(q));
+  let filtered=rezepte.filter(r=>!q||r.name.toLowerCase().includes(q)||(r.kategorie||'').includes(q));
+  // Person-Filter: Friedi/Finn nur Rezepte die explizit fuer sie markiert sind
+  if(_planPerson==='friedi')filtered=filtered.filter(r=>r.friedi);
+  if(_planPerson==='finn')filtered=filtered.filter(r=>r.finn);
+  const emptyText=_planPerson==='friedi'
+    ?'Keine Friedi-markierten Rezepte gefunden. Bitte zuerst in der Rezept-Liste den Friedi-Haken bei den passenden Rezepten setzen.'
+    :_planPerson==='finn'
+      ?'Keine Finn-markierten Rezepte gefunden. Bitte zuerst in der Rezept-Liste den Finn-Haken bei den passenden Rezepten setzen.'
+      :'Keine Rezepte gefunden';
   document.getElementById('plan-picker-list').innerHTML=filtered.length
     ?filtered.map(r=>`<div class="plan-picker-item" onclick="planSet(${r.id})"><span style="font-size:22px;flex-shrink:0">${esc(r.emoji||'🍳')}</span><div><div style="font-weight:500;font-size:14px">${esc(r.name)}</div><div style="font-size:12px;color:var(--text3)">${esc(katLabel(r.kategorie))} · ⏱ ${esc(r.zeit||'?')}</div></div></div>`).join('')
-    :'<div style="color:var(--text3);padding:16px;text-align:center;font-size:14px">Keine Rezepte gefunden</div>';
+    :`<div style="color:var(--text3);padding:16px;text-align:center;font-size:14px">${esc(emptyText)}</div>`;
 }
 
 async function planSet(id){

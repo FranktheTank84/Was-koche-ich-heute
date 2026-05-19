@@ -533,6 +533,43 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="kih-plan-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('kih-plan-modal')">✕</button>
+    <div class="modal-title">📅 Vorschlag in Wochenplan übernehmen</div>
+    <div style="clear:both;margin-top:12px"></div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:6px">Tag:</div>
+    <div id="kih-plan-tag" style="margin-bottom:14px;display:flex;flex-wrap:wrap;gap:6px">
+      <span class="chip" data-val="montag" onclick="kihChipSelect(this)">Mo</span>
+      <span class="chip" data-val="dienstag" onclick="kihChipSelect(this)">Di</span>
+      <span class="chip" data-val="mittwoch" onclick="kihChipSelect(this)">Mi</span>
+      <span class="chip" data-val="donnerstag" onclick="kihChipSelect(this)">Do</span>
+      <span class="chip" data-val="freitag" onclick="kihChipSelect(this)">Fr</span>
+      <span class="chip" data-val="samstag" onclick="kihChipSelect(this)">Sa</span>
+      <span class="chip" data-val="sonntag" onclick="kihChipSelect(this)">So</span>
+    </div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:6px">Mahlzeit:</div>
+    <div id="kih-plan-mahlzeit" style="margin-bottom:14px;display:flex;flex-wrap:wrap;gap:6px">
+      <span class="chip" data-val="fruehstueck" onclick="kihChipSelect(this)">☀️ Frühstück</span>
+      <span class="chip" data-val="mittag" onclick="kihChipSelect(this)">🕛 Mittag</span>
+      <span class="chip" data-val="abendessen" onclick="kihChipSelect(this)">🌙 Abendessen</span>
+      <span class="chip" data-val="snack" onclick="kihChipSelect(this)">🍎 Snack</span>
+      <span class="chip" data-val="dessert" onclick="kihChipSelect(this)">🍮 Dessert</span>
+      <span class="chip" data-val="unterwegs" onclick="kihChipSelect(this)">🚗 Unterwegs</span>
+    </div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:6px">Person:</div>
+    <div id="kih-plan-person" style="margin-bottom:18px;display:flex;flex-wrap:wrap;gap:6px">
+      <span class="chip" data-val="familie" onclick="kihChipSelect(this)">👨‍👩‍ Familie</span>
+      <span class="chip" data-val="friedi" onclick="kihChipSelect(this)">👧 Friedi</span>
+      <span class="chip" data-val="finn" onclick="kihChipSelect(this)">👦 Finn</span>
+    </div>
+    <div class="form-row">
+      <button class="btn-add" style="flex:1" onclick="kiHeuteInPlanBestaetigen()">✓ Übernehmen</button>
+      <button class="btn-secondary" onclick="closeModal('kih-plan-modal')">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="bestand-scan-modal">
   <div class="modal">
     <button class="modal-close" onclick="closeModal('bestand-scan-modal')">✕</button>
@@ -1623,17 +1660,134 @@ async function kiVorschlag(){
   if(zut)prompt+=`Besonders verfügbar im Bestand: ${zut}\n`;
   if(wunsch)prompt+=`Konkreter Wunsch / Lust auf: ${wunsch} — bitte unbedingt berücksichtigen\n`;
 
-  prompt+='\nFormat pro Vorschlag:\n- Emoji + Name\n- Welche Rezepte/Zutaten kombiniert werden\n- VOLLSTÄNDIGE Zubereitung Schritt für Schritt (keine Abkürzungen wie "wie gewohnt" — so beschreiben als ob jemand das Rezept zum ersten Mal macht)\n- Gesamtkochzeit\n- Kurze Begründung warum es passt';
-  if(familie.includes('friedi')||familie.includes('alle'))prompt+='\n- Ob Friedi es isst';
-  if(familie.includes('finn')||familie.includes('alle'))prompt+='\n- Ob Finn es isst';
-  prompt+='\nAuf Deutsch, klar und praktisch.';
+  prompt+=`\nJSON-FORMAT (PFLICHT): Antworte ausschließlich mit einem JSON-Array von 2-3 Vorschlägen — kein Markdown-Wrapper, keine erklärende Einleitung, kein Fließtext drumherum.\n\n`;
+  prompt+=`Struktur pro Vorschlag (alle Felder sind PFLICHT):\n`;
+  prompt+=`[{"name":"...","emoji":"🍳","kategorie":"fisch|rind|schwein|haehnchen|vegetarisch|vegan","zeit":"30 Min","portionen":4,"kohlenhydrate":"reis|nudeln|kartoffeln|pommes|schupfnudeln|gnocchi|brot|keins","mit_salat":true,"friedi":false,"finn":false,"begruendung":"kurzer Satz warum es passt","kombiniert_aus":"optional: welche DB-Rezepte/Komponenten kombiniert werden — leerer String wenn neu erfunden","zutaten":[{"name":"Hähnchenbrust","menge":600,"einheit":"g"}],"schritte":["1. Reis aufsetzen...","2. Hähnchen würfeln..."]}]\n\n`;
+  prompt+=`Anforderungen:\n`;
+  prompt+=`- schritte: VOLLSTÄNDIGE Zubereitung Schritt für Schritt — so beschreiben als ob jemand das Rezept zum ersten Mal macht. Keine Abkürzungen wie "wie gewohnt". Mindestens 5-8 Schritte je Vorschlag.\n`;
+  prompt+=`- zutaten: Mengen für die angegebenen portionen (Standard 4 Personen).\n`;
+  prompt+=`- friedi/finn: true wenn das Kind das gangbar essen würde.\n`;
+  prompt+=`- Auf Deutsch, klar und praktisch.`;
 
   try{
     const resp=await fetch(AIURL,{method:'POST',headers:await aiHeaders(),body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:8000,messages:[{role:'user',content:prompt}]})});
     const data=await resp.json();
     const text=data.content?.map(c=>c.text||'').join('')||'';
-    result.innerHTML=`<div class="ki-result" style="white-space:pre-wrap;line-height:1.6;font-size:14px">${esc(text)}</div>`;
-  }catch(e){result.innerHTML='<div class="ki-result" style="color:#c47a7a">Fehler.</div>';}
+    try{
+      let parsed=JSON.parse(text.replace(/```json|```/g,'').trim());
+      if(!Array.isArray(parsed))parsed=[parsed];
+      _kiHeute=parsed;
+      renderKiHeuteCards();
+    }catch(parseErr){
+      _kiHeute=[];
+      result.innerHTML=`<div class="ki-result" style="color:#c47a7a;white-space:pre-wrap;line-height:1.6;font-size:14px;padding:12px">JSON-Parse-Fehler: ${esc(parseErr?.message||'?')}\n\nKI-Antwort:\n${esc(text.slice(0,2000))}</div>`;
+    }
+  }catch(e){result.innerHTML='<div class="ki-result" style="color:#c47a7a">Fehler: '+esc(e?.message||'?')+'</div>';}
+}
+
+// ── KI Heute: State + Render + Aktionen ────────────────────────────
+let _kiHeute=[];
+let _kiHeuteIdx=null;
+
+function renderKiHeuteCards(){
+  const result=document.getElementById('ki-result');
+  if(!_kiHeute.length){result.innerHTML='<div class="ki-result" style="color:#c47a7a;padding:12px">Keine Vorschläge erhalten.</div>';return;}
+  const cards=_kiHeute.map((r,idx)=>{
+    const zutHtml=(r.zutaten||[]).map(z=>`<li>${z.menge?`${esc(z.menge)}${z.einheit?' '+esc(z.einheit):''} `:''}${esc(z.name||'?')}</li>`).join('');
+    const schritteHtml=(r.schritte||[]).map(s=>`<li>${esc(s)}</li>`).join('');
+    const tagInfos=[`⏱ ${esc(r.zeit||'?')}`,`👥 ${esc(r.portionen||4)} Port.`];
+    if(r.kohlenhydrate&&r.kohlenhydrate!=='keins')tagInfos.push(esc(r.kohlenhydrate));
+    if(r.mit_salat)tagInfos.push('🥗 Salat');
+    if(r.friedi)tagInfos.push('👧');
+    if(r.finn)tagInfos.push('👦');
+    return `<div class="kih-card" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <span style="font-size:32px;line-height:1;flex-shrink:0">${esc(r.emoji||'🍳')}</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;font-size:16px">${esc(r.name||'Vorschlag')}</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">${tagInfos.join(' · ')}</div>
+          ${r.begruendung?`<div style="font-size:13px;color:var(--text2);margin-top:6px;font-style:italic">${esc(r.begruendung)}</div>`:''}
+          ${r.kombiniert_aus?`<div style="font-size:12px;color:var(--text3);margin-top:4px">↳ ${esc(r.kombiniert_aus)}</div>`:''}
+        </div>
+      </div>
+      <div id="kih-details-${idx}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+        ${zutHtml?`<div style="font-weight:500;font-size:13px;margin-bottom:4px">Zutaten:</div><ul style="font-size:13px;margin:0 0 12px 18px;padding:0">${zutHtml}</ul>`:''}
+        ${schritteHtml?`<div style="font-weight:500;font-size:13px;margin-bottom:4px">Zubereitung:</div><ol style="font-size:13px;margin:0 0 0 18px;padding:0;line-height:1.5">${schritteHtml}</ol>`:''}
+      </div>
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+        <button class="btn-secondary" style="flex:1;min-width:120px;font-size:12px;padding:8px 10px" onclick="kiHeuteToggleSchritte(${idx},this)">📖 Schritte anzeigen</button>
+        <button class="btn-secondary" style="flex:1;min-width:120px;font-size:12px;padding:8px 10px" onclick="kiHeuteSpeichern(${idx})">💾 In Rezept-DB</button>
+        <button class="btn-secondary" style="flex:1;min-width:120px;font-size:12px;padding:8px 10px" onclick="kiHeuteInPlanOeffnen(${idx})">📅 In Plan</button>
+      </div>
+    </div>`;
+  }).join('');
+  result.innerHTML=cards;
+}
+
+function kiHeuteToggleSchritte(idx,btn){
+  const el=document.getElementById('kih-details-'+idx);
+  if(!el)return;
+  const isOpen=el.style.display!=='none';
+  el.style.display=isOpen?'none':'block';
+  btn.textContent=isOpen?'📖 Schritte anzeigen':'📕 Schritte ausblenden';
+}
+
+function kiHeuteSpeichern(idx){
+  const r=_kiHeute[idx];if(!r)return;
+  // Nutzt existierendes Confirm-Modal — Christian kann dort noch Friedi/Finn/Salat/KH anpassen
+  openConfirmRez({
+    name:r.name,
+    emoji:r.emoji||'🍳',
+    kategorie:r.kategorie||'haehnchen',
+    zeit:r.zeit||'',
+    portionen:r.portionen||4,
+    friedi:!!r.friedi,
+    finn:!!r.finn,
+    mit_salat:!!r.mit_salat,
+    kohlenhydrate:r.kohlenhydrate||null,
+    zutaten:r.zutaten||[],
+    schritte:r.schritte||[],
+    quelle:'KI-Vorschlag'
+  });
+}
+
+function kihChipSelect(chipEl){
+  chipEl.parentNode.querySelectorAll('.chip').forEach(c=>c.classList.remove('selected'));
+  chipEl.classList.add('selected');
+}
+
+function kiHeuteInPlanOeffnen(idx){
+  _kiHeuteIdx=idx;
+  // Reset alle Chips
+  document.querySelectorAll('#kih-plan-tag .chip,#kih-plan-mahlzeit .chip,#kih-plan-person .chip').forEach(c=>c.classList.remove('selected'));
+  // Defaults: heute, Abendessen, Familie
+  const TAGE=['sonntag','montag','dienstag','mittwoch','donnerstag','freitag','samstag'];
+  const heute=TAGE[new Date().getDay()];
+  document.querySelector(`#kih-plan-tag .chip[data-val="${heute}"]`)?.classList.add('selected');
+  document.querySelector(`#kih-plan-mahlzeit .chip[data-val="abendessen"]`)?.classList.add('selected');
+  document.querySelector(`#kih-plan-person .chip[data-val="familie"]`)?.classList.add('selected');
+  document.getElementById('kih-plan-modal').classList.add('open');
+}
+
+async function kiHeuteInPlanBestaetigen(){
+  if(_kiHeuteIdx===null)return;
+  const r=_kiHeute[_kiHeuteIdx];if(!r)return;
+  const tag=document.querySelector('#kih-plan-tag .chip.selected')?.dataset.val;
+  const mahlzeit=document.querySelector('#kih-plan-mahlzeit .chip.selected')?.dataset.val;
+  const person=document.querySelector('#kih-plan-person .chip.selected')?.dataset.val;
+  if(!tag||!mahlzeit||!person){alert('Bitte Tag, Mahlzeit und Person auswählen.');return;}
+  try{
+    const key=weekKey(0);
+    if(!wochenplan[key])await loadWochenplan(key);
+    if(!wochenplan[key][tag])wochenplan[key][tag]={};
+    if(!wochenplan[key][tag][mahlzeit])wochenplan[key][tag][mahlzeit]={};
+    const slot=wochenplan[key][tag][mahlzeit];
+    if(!Array.isArray(slot[person]))slot[person]=slot[person]?[slot[person]]:[];
+    slot[person].push({name:r.name,emoji:r.emoji||'🍳'});
+    await saveWochenplan(key);
+    closeModal('kih-plan-modal');
+    alert(`✓ "${r.name}" zum Wochenplan hinzugefügt (${tag}, ${mahlzeit}, ${person}).`);
+  }catch(e){alert('Fehler: '+(e?.message||'?'));}
 }
 
 let _grundstockDone=new Set();

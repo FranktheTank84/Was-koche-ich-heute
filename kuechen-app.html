@@ -258,7 +258,7 @@
     <div class="filter-panel">
       <div class="filter-label">Protein</div>
       <div class="filter-chips">
-        <span class="chip" data-group="protein" data-val="fisch" onclick="rChip(this)">🐟 Fisch</span>
+        <span class="chip" data-group="protein" data-val="fisch" onclick="rChip(this)">🐟 Fisch & Meeresfrüchte</span>
         <span class="chip" data-group="protein" data-val="rind" onclick="rChip(this)">🥩 Rind</span>
         <span class="chip" data-group="protein" data-val="schwein" onclick="rChip(this)">🐷 Schwein</span>
         <span class="chip" data-group="protein" data-val="haehnchen" onclick="rChip(this)">🍗 Hähnchen</span>
@@ -331,7 +331,7 @@
         <div class="filter-group">
           <div class="filter-label">Protein</div>
           <div class="zutaten-chips">
-            <span class="chip" data-group="protein" data-val="fisch" onclick="kiChip(this)">🐟 Fisch</span>
+            <span class="chip" data-group="protein" data-val="fisch" onclick="kiChip(this)">🐟 Fisch & Meeresfrüchte</span>
             <span class="chip" data-group="protein" data-val="rind" onclick="kiChip(this)">🥩 Rind</span>
             <span class="chip" data-group="protein" data-val="schwein" onclick="kiChip(this)">🐷 Schwein</span>
             <span class="chip" data-group="protein" data-val="haehnchen" onclick="kiChip(this)">🍗 Hähnchen</span>
@@ -405,7 +405,7 @@
       </div>
       <div class="filter-label">Vorlieben (optional)</div>
       <div class="zutaten-chips" style="margin-bottom:12px;flex-wrap:wrap">
-        <span class="chip" data-wk="pref" data-val="fisch" onclick="wkChip(this)">🐟 Fisch</span>
+        <span class="chip" data-wk="pref" data-val="fisch" onclick="wkChip(this)">🐟 Fisch & Meeresfrüchte</span>
         <span class="chip" data-wk="pref" data-val="rind" onclick="wkChip(this)">🥩 Rind</span>
         <span class="chip" data-wk="pref" data-val="schwein" onclick="wkChip(this)">🐷 Schwein</span>
         <span class="chip" data-wk="pref" data-val="haehnchen" onclick="wkChip(this)">🍗 Hähnchen</span>
@@ -1343,6 +1343,7 @@ function _buildPlanPromptKern(personen,mahlzeiten,prefs,wkWunsch){
   if(desserts.length)s+=`Desserts: ${cap(desserts)}\n`;
   if(fruehstueck.length)s+=`Frühstück: ${cap(fruehstueck)}\n`;
   if(unterwegsRez.length)s+=`Unterwegs: ${cap(unterwegsRez)}\n`;
+  s+=`Hinweis zur Kategorisierung: Die Kategorie "Fisch" umfasst auch Meeresfrüchte und Krustentiere (Garnelen, Krabben, Tintenfisch, Muscheln, Hummer, Jakobsmuscheln). Bei Vorschlägen unter "Fisch" gerne auch diese Gruppen mit einbeziehen.\n`;
   s+=`\nPERSONEN: ${personen.map(p=>PERSONEN_DE[p]).join(', ')}\n`;
   s+=`MAHLZEITEN: ${mahlzeiten.map(m=>MAHLZEIT_DE[m]).join(', ')}\n`;
   if(prefs.length)s+=`VORLIEBEN: ${prefs.join(', ')}\n`;
@@ -1619,7 +1620,7 @@ async function kiVorschlag(){
 
   const rList=t=>t.map(r=>`${r.emoji||''}${r.name}${r.kohlenhydrate&&r.kohlenhydrate!=='keins'?' ('+r.kohlenhydrate+')':''}`).join(', ');
 
-  const proteinMap={fisch:'Fisch',rind:'Rind',schwein:'Schwein',haehnchen:'Hähnchen',vegetarisch:'Vegetarisch/Vegan',fruehstueck:'Frühstück/Lunch',dessert:'Dessert',salat_rez:'Salat',dressing:'Dressing',dips:'Dips',unterwegs:'Unterwegs'};
+  const proteinMap={fisch:'Fisch, Meeresfrüchte und Krustentiere (Garnelen, Krabben, Tintenfisch, Muscheln)',rind:'Rind',schwein:'Schwein',haehnchen:'Hähnchen',vegetarisch:'Vegetarisch/Vegan',fruehstueck:'Frühstück/Lunch',dessert:'Dessert',salat_rez:'Salat',dressing:'Dressing',dips:'Dips',unterwegs:'Unterwegs'};
   const khMap={reis:'Reis',nudeln:'Nudeln',kartoffeln:'Kartoffeln',pommes:'Pommes',schupfnudeln:'Schupfnudeln',gnocchi:'Gnocchi',brot:'Brot'};
 
   let prompt='Du bist Kochassistent. Nutze unsere vorhandenen Rezepte als Basis — kombiniere sie zu kompletten Mahlzeiten oder ergänze sie mit eigenen Ideen. Wenn wir für eine Kategorie keine passenden Rezepte haben, schlage gerne eigene neue Gerichte vor.\n\n';
